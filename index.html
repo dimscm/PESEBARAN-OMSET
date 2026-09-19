@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Peta Pesebaran Omset Outlet</title>
+<meta name="description" content="Unggah file Excel outlet dan lihat pesebaran omset di peta. Ukuran titik mengikuti besar omset, warna mengikuti channel.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e3f0f9'/%3E%3Ccircle cx='11' cy='11' r='6' fill='%232eb3e6'/%3E%3Ccircle cx='22' cy='19' r='7' fill='%231f9c57'/%3E%3Ccircle cx='11' cy='24' r='4' fill='%2398a3ae'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+:root{
+  --canvas:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --border:#dde3e9; --border-strong:#c6d0d9;
+  --ink:#10161d; --ink-2:#3d4a57; --muted:#6c7a88;
+  --accent:#0f5f96; --accent-soft:#e3f0f9;
+  --blue:#2eb3e6; --green:#1f9c57; --grey:#98a3ae;
+  --shadow:0 1px 2px rgba(16,22,29,.06),0 8px 24px rgba(16,22,29,.07);
+  --radius:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --canvas:#0c1116; --surface:#141b22; --surface-2:#1a232b; --border:#26323c; --border-strong:#36454f;
+    --ink:#e7eef4; --ink-2:#bac7d2; --muted:#8b9aa7;
+    --accent:#4fb0e8; --accent-soft:#16303f;
+    --blue:#45c3f0; --green:#35bb6c; --grey:#7f8b96;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --canvas:#0c1116; --surface:#141b22; --surface-2:#1a232b; --border:#26323c; --border-strong:#36454f;
+  --ink:#e7eef4; --ink-2:#bac7d2; --muted:#8b9aa7;
+  --accent:#4fb0e8; --accent-soft:#16303f;
+  --blue:#45c3f0; --green:#35bb6c; --grey:#7f8b96;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+  margin:0; background:var(--canvas); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display{font-family:Archivo,system-ui,sans-serif;letter-spacing:-.015em;margin:0}
+.num{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* ---------- shell ---------- */
+.app{height:100%;display:grid;grid-template-rows:auto 1fr;}
+.topbar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{width:26px;height:26px;flex:none;border-radius:7px;background:
+  radial-gradient(circle at 30% 32%, var(--blue) 0 22%, transparent 23%),
+  radial-gradient(circle at 68% 60%, var(--green) 0 30%, transparent 31%),
+  radial-gradient(circle at 34% 76%, var(--grey) 0 14%, transparent 15%),
+  var(--accent-soft);
+  border:1px solid var(--border-strong)}
+.brand h1{font-size:16px;font-weight:700;white-space:nowrap}
+.brand small{display:block;color:var(--muted);font-size:11.5px;font-weight:400;letter-spacing:.02em}
+.topbar-spacer{flex:1 1 auto}
+.topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:8px;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);font-weight:500;font-size:13px;
+}
+.btn:hover{background:var(--surface-2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{filter:brightness(1.08);background:var(--accent)}
+.btn-sm{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--accent);padding:4px 6px}
+.btn-ghost:hover{background:var(--accent-soft)}
+
+.main{display:grid;grid-template-columns:376px 1fr;min-height:0}
+.panel{
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;overscroll-behavior:contain;padding:14px 16px 28px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.map-wrap{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:var(--surface-2)}
+
+/* ---------- panel blocks ---------- */
+.block{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+.block-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:9px 12px;border-bottom:1px solid var(--border);
+}
+.eyebrow{font-family:Archivo,sans-serif;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.block-body{padding:12px}
+.block-body.tight{padding:8px 12px 12px}
+
+/* upload */
+.drop{
+  border:1.5px dashed var(--border-strong);border-radius:var(--radius);background:var(--surface-2);
+  padding:18px 14px;text-align:center;transition:border-color .15s,background .15s;
+}
+.drop.hot{border-color:var(--accent);background:var(--accent-soft)}
+.drop p{margin:8px 0 0;color:var(--muted);font-size:12.5px}
+.drop .filename{color:var(--ink);font-weight:600}
+.file-meta{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted)}
+
+/* stats */
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2)}
+.stat .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:600;margin-top:2px;letter-spacing:-.02em}
+.stat .v.small{font-size:15px}
+
+/* legend / groups */
+.grp{display:flex;flex-direction:column;gap:2px}
+.grp-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;padding:6px 4px;border-radius:7px;width:100%;border:0;background:transparent;text-align:left}
+.grp-row:hover{background:var(--surface-2)}
+.grp-row.off{opacity:.4}
+.dot{width:13px;height:13px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.25)}
+.dot.blue{background:var(--blue)} .dot.green{background:var(--green)} .dot.grey{background:var(--grey)}
+.grp-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp-name span{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.grp-val{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
+
+/* filters */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:11px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.input,select.input{
+  width:100%;padding:7px 9px;border:1px solid var(--border-strong);border-radius:8px;
+  background:var(--surface);font-size:13px;
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:4px 9px;border:1px solid var(--border-strong);border-radius:999px;background:var(--surface);font-size:12px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.checklist{max-height:172px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:5px}
+.check{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:4px 6px;border-radius:6px;font-size:13px}
+.check:hover{background:var(--surface-2)}
+.check input{accent-color:var(--accent);width:14px;height:14px}
+.check .c{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.switch-row{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--ink-2);line-height:1.35}
+.switch-row input{margin-top:2px;accent-color:var(--accent);width:15px;height:15px;flex:none}
+
+/* ranking */
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rank li{border-top:1px solid var(--border)}
+.rank li:first-child{border-top:0}
+.rank button{
+  width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;
+  padding:7px 4px;border:0;background:transparent;text-align:left;border-radius:7px;
+}
+.rank button:hover{background:var(--surface-2)}
+.rank .nm{font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .nm span{display:block;font-size:11px;color:var(--muted);font-weight:400;overflow:hidden;text-overflow:ellipsis}
+.rank .vl{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:3px}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.area-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-top:1px solid var(--border);align-items:baseline}
+.area-row:first-child{border-top:0}
+.area-row .nm{font-size:12.5px}
+.area-row .vl{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.warn{
+  display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;
+  background:var(--accent-soft);border:1px solid var(--border);font-size:12.5px;color:var(--ink-2)
+}
+.sample-banner{
+  position:absolute;z-index:500;top:10px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:10px;padding:7px 10px 7px 13px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--border-strong);box-shadow:var(--shadow);font-size:12.5px;max-width:calc(100% - 20px)
+}
+.sample-banner b{font-weight:600}
+.map-tools{position:absolute;z-index:500;right:10px;bottom:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.map-card{background:var(--surface);border:1px solid var(--border-strong);border-radius:9px;box-shadow:var(--shadow);padding:9px 11px}
+.scale-legend{display:flex;align-items:flex-end;gap:12px}
+.scale-item{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--muted);font-size:10.5px}
+.scale-item .ring{border-radius:50%;background:color-mix(in srgb,var(--grey) 55%,transparent);border:1px solid var(--border-strong)}
+
+/* leaflet overrides */
+.leaflet-container{font-family:"IBM Plex Sans",system-ui,sans-serif;background:var(--surface-2)}
+.leaflet-popup-content-wrapper{background:var(--surface);color:var(--ink);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.leaflet-popup-tip{background:var(--surface);border:1px solid var(--border)}
+.leaflet-popup-content{margin:11px 13px;font-size:13px;min-width:190px}
+.leaflet-bar a,.leaflet-control-layers{background:var(--surface);color:var(--ink);border-color:var(--border-strong)}
+.leaflet-bar a:hover{background:var(--surface-2)}
+.leaflet-control-attribution{background:color-mix(in srgb,var(--surface) 82%,transparent)!important;color:var(--muted)!important}
+.leaflet-control-attribution a{color:var(--accent)!important}
+.pop-title{font-family:Archivo,sans-serif;font-weight:700;font-size:14px;margin-bottom:2px}
+.pop-omset{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:15px;margin:6px 0 4px}
+.pop-tag{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;border:1px solid var(--border-strong);color:var(--ink-2)}
+.pop-meta{color:var(--muted);font-size:12px;margin-top:5px;line-height:1.45}
+
+.overlay{position:absolute;inset:0;z-index:600;display:grid;place-items:center;background:color-mix(in srgb,var(--canvas) 72%,transparent);backdrop-filter:blur(2px)}
+.overlay .box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:var(--shadow);font-size:13px}
+
+@media (max-width:620px){
+  .sample-banner{left:10px;right:10px;transform:none;max-width:none;border-radius:10px;font-size:12px;padding:8px 10px}
+  .topbar{padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
+  .map-tools{right:8px;bottom:26px}
+  .scale-legend{gap:9px}
+}
+@media (max-width:900px){
+  .main{grid-template-columns:1fr;grid-template-rows:minmax(300px,46vh) 1fr;}
+  .map-wrap{order:-1;border-bottom:1px solid var(--border)}
+  .panel{border-right:0;overflow-y:visible;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+  .app{height:auto;min-height:100%}
+  body{overflow-y:auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div>
+        <h1>Pesebaran Omset Outlet</h1>
+        <small>Unggah Excel &rarr; peta sebaran per outlet</small>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" id="btn-fit" title="Perbesar peta ke seluruh titik yang tampil">Zoom ke data</button>
+      <button class="btn btn-sm" id="btn-csv" title="Unduh data yang sedang tampil">Unduh CSV</button>
+      <button class="btn btn-sm" id="btn-theme" title="Ganti tema terang/gelap" aria-label="Ganti tema">Tema</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="panel" id="panel">
+      <!-- SUMBER DATA -->
+      <section class="block">
+        <div class="block-head"><span class="eyebrow">Sumber data</span><span class="eyebrow" id="sheet-tag"></span></div>
+        <div class="block-body">
+          <div class="drop" id="drop">
+            <button class="btn btn-primary" id="btn-pick">Pilih file Excel</button>
+            <p>atau tarik file ke sini &middot; .xlsx, .xls, .csv</p>
+            <p class="filename" id="fname" hidden></p>
+          </div>
+          <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" hidden>
+          <div class="file-meta" id="fmeta" style="margin-top:10px" hidden></div>
+          <div id="sheet-wrap" class="field" style="margin-top:10px" hidden>
+            <label for="sheet">Sheet</label>
+            <select class="input" id="sheet"></select>
+          </div>
+          <div id="map-cols" class="block-body tight" style="padding:0;margin-top:10px" hidden></div>
+          <p class="note" style="margin-top:10px">Kolom dibaca otomatis: <b>Kecamatan, Kelurahan, No Outlet, Nama Outlet, Channel, Alamat, Omset, Long, Lat</b>. Nama kolom lain yang sejenis juga dikenali.</p>
+        </div>
+      </section>
+
+      <!-- RINGKASAN -->
+      <section class="block">
+        <div class="block-head"><span class="eyebrow">Ringkasan tampil</span><span class="eyebrow num" id="sum-share"></span></div>
+        <div class="block-body">
+          <div class="stat-row">
+            <div class="stat"><div class="k">Outlet</div><div class="v num" id="s-count">0</div></div>
+            <div class="stat"><div class="k">Total omset</div><div class="v small num" id="s-omset">Rp 0</div></div>
+            <div class="stat"><div class="k">Rata-rata</div><div class="v small num" id="s-avg">Rp 0</div></div>
+            <div class="stat"><div class="k">Median</div><div class="v small num" id="s-med">Rp 0</div></div>
+          </div>
+          <div id="nogeo" class="warn" style="margin-top:11px" hidden></div>
+        </div>
+      </section>
+
+      <!-- CHANNEL -->
+      <section class="block">
+        <div class="block-head"><span class="eyebrow">Warna channel</span><button class="btn-ghost btn-sm" id="grp-all">Tampilkan semua</button></div>
+        <div class="block-body tight">
+          <div class="grp" id="grp-list"></div>
+          <label class="switch-row" style="margin-top:8px">
+            <input type="checkbox" id="tdp-gromin">
+            <span>Hitung channel <b>TDP&nbsp;&ndash;&nbsp;GROMIN</b> sebagai Gromin (biru muda). Standarnya masuk TDP (hijau).</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- FILTER -->
+      <section class="block">
+        <div class="block-head"><span class="eyebrow">Filter</span><button class="btn-ghost btn-sm" id="reset">Reset</button></div>
+        <div class="block-body">
+          <div class="field">
+            <label for="q">Cari outlet / alamat / kode</label>
+            <input class="input" id="q" type="search" placeholder="mis. TK RAYA ABADI">
+          </div>
+          <div class="field">
+            <label>Omset minimal</label>
+            <div class="chips" id="min-chips"></div>
+          </div>
+          <div class="field" id="kec-field">
+            <label>Kecamatan <button class="btn-ghost btn-sm" data-all="kec" type="button">semua</button></label>
+            <div class="checklist" id="kec-list"></div>
+          </div>
+          <div class="field" id="kel-field">
+            <label>Kelurahan <button class="btn-ghost btn-sm" data-all="kel" type="button">semua</button></label>
+            <div class="checklist" id="kel-list"></div>
+          </div>
+          <div class="field" id="chan-field">
+            <label>Channel <button class="btn-ghost btn-sm" data-all="chan" type="button">semua</button></label>
+            <div class="checklist" id="chan-list"></div>
+          </div>
+          <div class="field">
+            <label for="size">Ukuran titik <span class="num" id="size-val">1,0&times;</span></label>
+            <input id="size" type="range" min="0.5" max="2.5" step="0.1" value="1" style="width:100%;accent-color:var(--accent)">
+          </div>
+        </div>
+      </section>
+
+      <!-- AREA -->
+      <section class="block">
+        <div class="block-head"><span class="eyebrow">Omset per wilayah</span><select class="input" id="area-by" style="width:auto;padding:3px 7px;font-size:12px"><option value="kecamatan">Kecamatan</option><option value="kelurahan">Kelurahan</option></select></div>
+        <div class="block-body tight"><div id="area-list"></div></div>
+      </section>
+
+      <!-- TOP -->
+      <section class="block">
+        <div class="block-head"><span class="eyebrow">Outlet omset tertinggi</span><span class="eyebrow">Top 12</span></div>
+        <div class="block-body tight"><ol class="rank" id="top-list"></ol></div>
+      </section>
+
+      <p class="note">Titik di peta memakai skala akar kuadrat terhadap persentil ke-98, jadi satu outlet raksasa tidak menenggelamkan outlet lain. Klik titik untuk detail.</p>
+    </aside>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="sample-banner" id="sample-banner">
+        <span><b>Data contoh.</b> Unggah file Excel Anda untuk melihat data asli.</span>
+        <button class="btn btn-sm btn-primary" id="btn-pick2">Unggah</button>
+      </div>
+      <div class="map-tools">
+        <div class="map-card">
+          <div class="scale-legend" id="scale-legend"></div>
+        </div>
+      </div>
+      <div class="overlay" id="overlay" hidden><div class="box">Membaca file&hellip;</div></div>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script>
+"use strict";
+
+/* =============== util =============== */
+const $ = (id) => document.getElementById(id);
+const nfID = new Intl.NumberFormat("id-ID");
+const rp = (v) => "Rp " + nfID.format(Math.round(v || 0));
+function rpShort(v){
+  const s = v < 0 ? "-" : "", a = Math.abs(v || 0);
+  const f = (n, u) => s + "Rp " + (Math.round(n * 10) / 10).toString().replace(".", ",") + " " + u;
+  if (a >= 1e12) return f(a / 1e12, "T");
+  if (a >= 1e9)  return f(a / 1e9, "M");
+  if (a >= 1e6)  return f(a / 1e6, "jt");
+  if (a >= 1e3)  return f(a / 1e3, "rb");
+  return s + "Rp " + nfID.format(Math.round(a));
+}
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+function pct(sorted, p){
+  if (!sorted.length) return 0;
+  const i = (sorted.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+}
+function store(k, v){
+  try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {}
+}
+
+/* number parsing that tolerates "17.450.000", "17,450,000", "-6,175", "Rp 1.200" */
+function toNum(v){
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  if (v == null) return null;
+  let s = String(v).trim().replace(/\s|rp|idr/gi, "");
+  if (!s || !/\d/.test(s)) return null;
+  s = s.replace(/[^\d.,+-]/g, "");
+  const lastDot = s.lastIndexOf("."), lastCom = s.lastIndexOf(",");
+  if (lastDot > -1 && lastCom > -1){
+    const dec = lastDot > lastCom ? "." : ",";
+    const thou = dec === "." ? "," : ".";
+    s = s.split(thou).join("").replace(dec, ".");
+  } else if (lastCom > -1){
+    // single comma: decimal if it is not a thousands group of exactly 3 digits
+    s = /,\d{3}$/.test(s) && s.replace(/[^\d]/g, "").length > 3 ? s.split(",").join("") : s.replace(",", ".");
+  } else if (lastDot > -1){
+    const parts = s.split(".");
+    if (parts.length > 2 || (parts[1] && parts[1].length === 3 && parts[0].length <= 3 && !/^0$/.test(parts[0]))) {
+      // 17.450.000 style thousands — but keep 106.92 style coords (handled by caller range check)
+      s = parts.join("");
+    }
+  }
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+}
+function toCoord(v){
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  if (v == null) return null;
+  let s = String(v).trim().replace(/[^\d.,+-]/g, "");
+  if (!s) return null;
+  if (s.indexOf(",") > -1 && s.indexOf(".") === -1) s = s.replace(",", ".");
+  else if (s.indexOf(",") > -1) s = s.split(",").join("");
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+}
+
+/* =============== field detection =============== */
+const FIELDS = [
+  { key:"kecamatan", label:"Kecamatan", pats:[/^kec(amatan)?$/, /kecamatan/, /district/] },
+  { key:"kelurahan", label:"Kelurahan", pats:[/^kel(urahan)?$/, /kelurahan/, /desa/, /village/] },
+  { key:"kode",      label:"No Outlet", pats:[/no\.?\s*outlet/, /kode\s*outlet/, /outlet\s*(id|code)/, /^kode$/, /^id$/] },
+  { key:"nama",      label:"Nama Outlet", pats:[/nama\s*outlet/, /outlet\s*name/, /^nama$/, /^name$/, /pelanggan/, /customer/] },
+  { key:"channel",   label:"Channel", pats:[/cha?nn?el/, /kanal/, /tipe\s*outlet/, /segment/] },
+  { key:"alamat",    label:"Alamat", pats:[/alamat/, /address/] },
+  { key:"omset",     label:"Omset", pats:[/oms?[ez]t/, /penjualan/, /revenue/, /^sales/, /value/, /nilai/] },
+  { key:"lon",       label:"Longitude", pats:[/^long?$/, /longitude/, /^lng$/, /bujur/, /^x$/] },
+  { key:"lat",       label:"Latitude", pats:[/^lat$/, /latitude/, /lintang/, /^y$/] }
+];
+const norm = (s) => String(s == null ? "" : s).toLowerCase().replace(/[\s._\-()]+/g, " ").trim();
+
+function detect(rows){
+  let best = null;
+  const limit = Math.min(rows.length, 30);
+  for (let r = 0; r < limit; r++){
+    const cells = rows[r] || [];
+    if (!cells.length) continue;
+    const map = {}; let hits = 0;
+    FIELDS.forEach((f) => {
+      for (let c = 0; c < cells.length; c++){
+        const h = norm(cells[c]);
+        if (!h || map[f.key] != null) continue;
+        if (f.pats.some((p) => p.test(h))){ map[f.key] = c; hits++; break; }
+      }
+    });
+    const score = hits + (map.lat != null && map.lon != null ? 3 : 0) + (map.omset != null ? 2 : 0);
+    if (!best || score > best.score) best = { row: r, map, hits, score };
+  }
+  return best && best.hits >= 3 ? best : null;
+}
+
+/* =============== channel grouping =============== */
+const GROUPS = {
+  blue: { id:"blue", name:"Gromin & Star Outlet", sub:"biru muda", color:"var(--blue)", css:"blue" },
+  green:{ id:"green", name:"TDP", sub:"hijau", color:"var(--green)", css:"green" },
+  grey: { id:"grey", name:"Channel lainnya", sub:"abu-abu", color:"var(--grey)", css:"grey" }
+};
+function groupOf(channel, grominWins){
+  const s = String(channel || "").toUpperCase();
+  const isTDP = /\bTDP\b/.test(s);
+  const isGromin = /GRO\s*-?\s*MIN|GROMIN/.test(s);
+  const isStar = /STAR\s*OUTLET/.test(s) || /\bS[OL]\b\s*-/.test(s);
+  if (isTDP && isGromin) return grominWins ? "blue" : "green";
+  if (isGromin || isStar) return "blue";
+  if (isTDP) return "green";
+  return "grey";
+}
+const hexOf = (g) => getComputedStyle(document.documentElement).getPropertyValue(
+  g === "blue" ? "--blue" : g === "green" ? "--green" : "--grey").trim() || "#999";
+
+/* =============== state =============== */
+const S = {
+  raw: [],          // all parsed rows (mapped)
+  rows: [],         // rows with valid coords
+  noGeo: [],        // rows without coords
+  isSample: true,
+  fileName: "",
+  wb: null, sheetNames: [], colmap: null,
+  grominWins: false,
+  off: {},          // hidden groups
+  kec: new Set(), kel: new Set(), chan: new Set(),  // selected (empty = semua)
+  q: "", minOmset: 0, sizeMul: 1,
+  ref: 1, markers: null, layer: null
+};
+
+/* =============== map =============== */
+const map = L.map("map", { preferCanvas:true, zoomControl:true, worldCopyJump:true })
+  .setView([-6.2, 106.9], 12);
+const TILES = {
+  "Terang (Positron)": L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    maxZoom:19, subdomains:"abcd",
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+  "Gelap (Dark Matter)": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom:19, subdomains:"abcd",
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+  "Jalan (OSM)": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' })
+};
+L.control.layers(TILES, null, { position:"topright", collapsed:true }).addTo(map);
+let userPickedBase = false;
+map.on("baselayerchange", () => { userPickedBase = true; });
+function isDark(){
+  const t = document.documentElement.getAttribute("data-theme");
+  return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function syncTiles(){
+  if (userPickedBase) return;
+  const want = isDark() ? TILES["Gelap (Dark Matter)"] : TILES["Terang (Positron)"];
+  Object.keys(TILES).forEach((k) => { if (TILES[k] !== want && map.hasLayer(TILES[k])) map.removeLayer(TILES[k]); });
+  if (!map.hasLayer(want)) want.addTo(map);
+}
+
+S.layer = L.layerGroup().addTo(map);
+
+/* =============== rendering =============== */
+function radiusOf(v){
+  const t = Math.max(0, Math.min(1, (v || 0) / (S.ref || 1)));
+  return (3 + 19 * Math.sqrt(t)) * S.sizeMul;
+}
+function visible(){
+  const q = S.q.trim().toLowerCase();
+  return S.rows.filter((r) => {
+    if (S.off[r.g]) return false;
+    if (S.kec.size && !S.kec.has(r.kecamatan)) return false;
+    if (S.kel.size && !S.kel.has(r.kelurahan)) return false;
+    if (S.chan.size && !S.chan.has(r.channel || "(tanpa channel)")) return false;
+    if (S.minOmset && (r.omset || 0) < S.minOmset) return false;
+    if (q && r.hay.indexOf(q) === -1) return false;
+    return true;
+  });
+}
+function popupHTML(r){
+  return '<div class="pop-title">' + esc(r.nama || "(tanpa nama)") + "</div>" +
+    '<span class="pop-tag">' + esc(r.channel || "Tanpa channel") + "</span>" +
+    '<div class="pop-omset" style="color:' + hexOf(r.g) + '">' + rp(r.omset) + "</div>" +
+    '<div class="pop-meta">' +
+      (r.kelurahan || r.kecamatan ? esc([r.kelurahan, r.kecamatan].filter(Boolean).join(", ")) + "<br>" : "") +
+      (r.alamat ? esc(r.alamat) + "<br>" : "") +
+      (r.kode ? "No. outlet " + esc(r.kode) + " &middot; " : "") +
+      r.lat.toFixed(5) + ", " + r.lon.toFixed(5) +
+    "</div>";
+}
+function draw(){
+  const rows = visible();
+  S.layer.clearLayers();
+  // biggest first so small dots stay clickable on top
+  const ordered = rows.slice().sort((a, b) => (b.omset || 0) - (a.omset || 0));
+  const byId = {};
+  ordered.forEach((r) => {
+    const m = L.circleMarker([r.lat, r.lon], {
+      radius: radiusOf(r.omset), fillColor: hexOf(r.g), fillOpacity: .74,
+      color: isDark() ? "#05090d" : "#123", weight: .7, opacity: .55
+    });
+    m.bindPopup(popupHTML(r), { maxWidth: 280 });
+    m.addTo(S.layer);
+    byId[r._i] = m;
+  });
+  S.markers = byId;
+  stats(rows);
+}
+function fit(){
+  const rows = visible();
+  if (!rows.length) return;
+  map.fitBounds(L.latLngBounds(rows.map((r) => [r.lat, r.lon])).pad(0.08), { animate:false });
+}
+
+/* =============== panel =============== */
+function stats(rows){
+  const vals = rows.map((r) => r.omset || 0);
+  const total = vals.reduce((a, b) => a + b, 0);
+  const sorted = vals.slice().sort((a, b) => a - b);
+  $("s-count").textContent = nfID.format(rows.length);
+  $("s-omset").textContent = rpShort(total);
+  $("s-avg").textContent = rpShort(rows.length ? total / rows.length : 0);
+  $("s-med").textContent = rpShort(pct(sorted, .5));
+  const allTotal = S.rows.reduce((a, r) => a + (r.omset || 0), 0);
+  $("sum-share").textContent = allTotal ? Math.round(total / allTotal * 100) + "% dari total" : "";
+
+  // groups
+  const agg = { blue:{ n:0, v:0 }, green:{ n:0, v:0 }, grey:{ n:0, v:0 } };
+  S.rows.forEach((r) => { agg[r.g].n++; agg[r.g].v += r.omset || 0; });
+  $("grp-list").innerHTML = Object.keys(GROUPS).map((k) => {
+    const g = GROUPS[k];
+    return '<button class="grp-row' + (S.off[k] ? " off" : "") + '" data-g="' + k + '" title="Klik untuk sembunyikan / tampilkan">' +
+      '<span class="dot ' + g.css + '"></span>' +
+      '<span class="grp-name">' + g.name + "<span>" + nfID.format(agg[k].n) + " outlet &middot; " + g.sub + "</span></span>" +
+      '<span class="grp-val">' + rpShort(agg[k].v) + "</span></button>";
+  }).join("");
+
+  // area ranking
+  const by = $("area-by").value;
+  const m = {};
+  rows.forEach((r) => { const k = r[by] || "(tanpa " + by + ")"; m[k] = (m[k] || 0) + (r.omset || 0); });
+  const list = Object.keys(m).map((k) => [k, m[k]]).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const max = list.length ? list[0][1] : 1;
+  $("area-list").innerHTML = list.length ? list.map((e) =>
+    '<div class="area-row"><div class="nm">' + esc(e[0]) +
+    '<div class="bar"><i style="width:' + Math.max(2, e[1] / max * 100) + '%"></i></div></div>' +
+    '<div class="vl">' + rpShort(e[1]) + "</div></div>").join("")
+    : '<p class="note">Tidak ada data pada filter ini.</p>';
+
+  // top outlets
+  const top = rows.slice().sort((a, b) => (b.omset || 0) - (a.omset || 0)).slice(0, 12);
+  $("top-list").innerHTML = top.length ? top.map((r, i) =>
+    '<li><button data-i="' + r._i + '"><span class="dot ' + GROUPS[r.g].css + '"></span>' +
+    '<span class="nm">' + esc(r.nama || "(tanpa nama)") + "<span>" + esc([r.kelurahan, r.kecamatan].filter(Boolean).join(", ") || r.channel || "") + "</span></span>" +
+    '<span class="vl">' + rpShort(r.omset) + "</span></button></li>").join("")
+    : '<li><p class="note" style="padding:6px 4px">Tidak ada outlet pada filter ini.</p></li>';
+
+  scaleLegend();
+}
+function scaleLegend(){
+  const vals = S.rows.map((r) => r.omset || 0).sort((a, b) => a - b);
+  if (!vals.length){ $("scale-legend").innerHTML = ""; return; }
+  const picks = [pct(vals, .5), pct(vals, .9), pct(vals, .99)];
+  $("scale-legend").innerHTML =
+    '<div class="scale-item" style="align-self:center;margin-right:2px"><span style="writing-mode:horizontal-tb">Omset</span></div>' +
+    picks.map((v) => {
+      const d = Math.max(6, radiusOf(v) * 2);
+      return '<div class="scale-item"><span class="ring" style="width:' + d + "px;height:" + d + 'px"></span>' + rpShort(v) + "</div>";
+    }).join("");
+}
+function checklist(el, values, sel, onchange, colored){
+  const keys = Object.keys(values).sort(colored ? (a, b) => values[b] - values[a] || a.localeCompare(b)
+                                                : (a, b) => a.localeCompare(b));
+  el.innerHTML = keys.length ? keys.map((k) => {
+    const d = colored ? '<span class="dot ' + GROUPS[groupOf(k, S.grominWins)].css + '" style="width:9px;height:9px"></span> ' : "";
+    return '<label class="check"><input type="checkbox" value="' + esc(k) + '"' + (sel.has(k) ? " checked" : "") + ">" +
+      "<span>" + d + esc(k || "(kosong)") + '</span><span class="c">' + nfID.format(values[k]) + "</span></label>";
+  }).join("") : '<p class="note" style="padding:4px">Kolom tidak tersedia pada file ini.</p>';
+  el.oninput = (e) => {
+    const cb = e.target; if (cb.type !== "checkbox") return;
+    if (cb.checked) sel.add(cb.value); else sel.delete(cb.value);
+    onchange();
+  };
+}
+function countBy(field, respectKec, respectKel){
+  const c = {};
+  S.rows.forEach((r) => {
+    if (respectKec && S.kec.size && !S.kec.has(r.kecamatan)) return;
+    if (respectKel && S.kel.size && !S.kel.has(r.kelurahan)) return;
+    const v = field === "channel" ? (r.channel || "(tanpa channel)") : r[field];
+    if (field !== "channel" && !v) return;
+    c[v] = (c[v] || 0) + 1;
+  });
+  return c;
+}
+function buildFilters(){
+  const kecC = countBy("kecamatan", false, false);
+  $("kec-field").hidden = !Object.keys(kecC).length;
+  checklist($("kec-list"), kecC, S.kec, () => { rebuildDependent(); draw(); });
+  rebuildDependent();
+}
+function rebuildDependent(){
+  const kelC = countBy("kelurahan", true, false);
+  Array.from(S.kel).forEach((k) => { if (!kelC[k]) S.kel.delete(k); });
+  $("kel-field").hidden = !Object.keys(kelC).length;
+  checklist($("kel-list"), kelC, S.kel, () => { rebuildChannels(); draw(); });
+  rebuildChannels();
+}
+function rebuildChannels(){
+  const chC = countBy("channel", true, true);
+  Array.from(S.chan).forEach((k) => { if (!chC[k]) S.chan.delete(k); });
+  $("chan-field").hidden = !Object.keys(chC).length;
+  checklist($("chan-list"), chC, S.chan, draw, true);
+}
+function apply(){ draw(); }
+
+/* =============== ingest =============== */
+function ingest(records, meta){
+  const rows = [], noGeo = [];
+  records.forEach((r, i) => {
+    r._i = i;
+    r.g = groupOf(r.channel, S.grominWins);
+    r.hay = [r.nama, r.alamat, r.kode, r.channel].join(" ").toLowerCase();
+    const okLat = r.lat != null && r.lat !== 0 && Math.abs(r.lat) <= 90;
+    const okLon = r.lon != null && r.lon !== 0 && Math.abs(r.lon) <= 180;
+    if (okLat && okLon) rows.push(r); else noGeo.push(r);
+  });
+  // auto-swap if latitude values look like longitudes (common column mix-up)
+  if (rows.length){
+    const badLat = rows.filter((r) => Math.abs(r.lat) > 90).length;
+    const swapped = rows.filter((r) => Math.abs(r.lat) > 11 && Math.abs(r.lon) <= 11).length;
+    if (badLat > 0 || swapped > rows.length * 0.8){
+      rows.forEach((r) => { const t = r.lat; r.lat = r.lon; r.lon = t; });
+    }
+  }
+  S.raw = records; S.rows = rows; S.noGeo = noGeo;
+  S.isSample = !!(meta && meta.sample);
+  const vals = rows.map((r) => r.omset || 0).filter((v) => v > 0).sort((a, b) => a - b);
+  S.ref = pct(vals, .98) || (vals.length ? vals[vals.length - 1] : 1) || 1;
+  S.kec.clear(); S.kel.clear(); S.chan.clear(); S.off = {};
+  $("sample-banner").hidden = !S.isSample;
+  $("nogeo").hidden = !noGeo.length;
+  if (noGeo.length){
+    $("nogeo").innerHTML = "<span>&#9888;</span><span><b>" + nfID.format(noGeo.length) +
+      " outlet</b> tidak punya koordinat yang valid, jadi tidak muncul di peta. Nilainya tetap ada di file Anda." +
+      ' <button class="btn-ghost btn-sm" id="dl-nogeo" type="button">Unduh daftarnya</button></span>';
+    $("dl-nogeo").onclick = () => downloadCSV(noGeo, "outlet-tanpa-koordinat.csv");
+  }
+  buildFilters();
+  draw();
+  fit();
+}
+function rowsFromSheet(wb, sheetName){
+  const ws = wb.Sheets[sheetName];
+  const grid = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:null, blankrows:false });
+  const det = detect(grid);
+  if (!det) return { error: "Tidak menemukan baris judul kolom. Pastikan ada kolom Lat dan Long." };
+  const m = det.map, out = [];
+  for (let r = det.row + 1; r < grid.length; r++){
+    const c = grid[r] || [];
+    const get = (k) => (m[k] == null ? null : c[m[k]]);
+    const str = (k) => { const v = get(k); return v == null ? "" : String(v).trim(); };
+    const rec = {
+      kecamatan: str("kecamatan").toUpperCase(),
+      kelurahan: str("kelurahan").toUpperCase(),
+      kode: str("kode"),
+      nama: str("nama"),
+      channel: str("channel"),
+      alamat: str("alamat"),
+      omset: toNum(get("omset")) || 0,
+      lon: toCoord(get("lon")),
+      lat: toCoord(get("lat"))
+    };
+    const hasAny = rec.nama || rec.kode || rec.kecamatan || rec.lat != null;
+    if (hasAny) out.push(rec);
+  }
+  return { rows: out, map: m, headerRow: det.row, headers: grid[det.row] || [] };
+}
+function loadWorkbook(wb, fileName){
+  S.wb = wb; S.sheetNames = wb.SheetNames;
+  const sel = $("sheet");
+  sel.innerHTML = wb.SheetNames.map((n) => '<option value="' + esc(n) + '">' + esc(n) + "</option>").join("");
+  $("sheet-wrap").hidden = wb.SheetNames.length < 2;
+  let chosen = wb.SheetNames[0], res = null;
+  for (const n of wb.SheetNames){
+    const r = rowsFromSheet(wb, n);
+    if (r.rows && r.rows.length){ chosen = n; res = r; break; }
+  }
+  if (!res) res = rowsFromSheet(wb, chosen);
+  sel.value = chosen;
+  if (res.error || !res.rows || !res.rows.length){
+    alertBox(res.error || "Sheet ini tidak berisi baris data yang bisa dibaca.");
+    return;
+  }
+  S.fileName = fileName;
+  $("fname").hidden = false; $("fname").textContent = fileName;
+  $("fmeta").hidden = false;
+  $("fmeta").innerHTML = "<span>" + nfID.format(res.rows.length) + " baris dibaca</span><span>judul kolom di baris " + (res.headerRow + 1) + "</span>";
+  $("sheet-tag").textContent = chosen;
+  showColMap(res);
+  ingest(res.rows, { sample:false });
+}
+function showColMap(res){
+  const el = $("map-cols");
+  const found = FIELDS.filter((f) => res.map[f.key] != null).map((f) => f.label);
+  const missing = FIELDS.filter((f) => res.map[f.key] == null).map((f) => f.label);
+  el.hidden = false;
+  el.innerHTML = '<p class="note">Terbaca: <b>' + found.join(", ") + "</b>" +
+    (missing.length ? '.<br><span style="color:var(--muted)">Tidak ditemukan: ' + missing.join(", ") + ".</span>" : ".") + "</p>";
+}
+function alertBox(msg){
+  $("fmeta").hidden = false;
+  $("fmeta").innerHTML = '<span style="color:#c0392b">' + esc(msg) + "</span>";
+}
+function readFile(file){
+  if (!file) return;
+  $("overlay").hidden = false;
+  const fr = new FileReader();
+  fr.onload = (e) => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array", cellDates:false });
+      loadWorkbook(wb, file.name);
+    } catch (err){
+      alertBox("File tidak bisa dibaca: " + err.message);
+    } finally {
+      $("overlay").hidden = true;
+    }
+  };
+  fr.onerror = () => { $("overlay").hidden = true; alertBox("Gagal membaca file."); };
+  fr.readAsArrayBuffer(file);
+}
+
+/* =============== CSV =============== */
+function downloadCSV(rows, name){
+  const cols = ["kecamatan","kelurahan","kode","nama","channel","alamat","omset","lon","lat"];
+  const head = ["Kecamatan","Kelurahan","No Outlet","Nama Outlet","Channel","Alamat","Omset","Long","Lat","Kelompok Warna"];
+  const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const body = rows.map((r) => cols.map((c) => q(r[c])).concat(q(GROUPS[r.g] ? GROUPS[r.g].name : "")).join(","));
+  const csv = "﻿" + head.map(q).join(",") + "\n" + body.join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 400);
+}
+
+/* =============== sample data =============== */
+function sampleRows(){
+  let seed = 20260919;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const areas = [
+    { kec:"CAKUNG", kels:["CAKUNG BARAT","PENGGILINGAN","PULO GEBANG"], c:[-6.185, 106.935] },
+    { kec:"DUREN SAWIT", kels:["KLENDER","PONDOK BAMBU","MALAKA JAYA"], c:[-6.228, 106.918] },
+    { kec:"JATINEGARA", kels:["BIDARA CINA","CIPINANG MUARA","RAWA BUNGA"], c:[-6.223, 106.870] },
+    { kec:"MATRAMAN", kels:["KAYU MANIS","PAL MERIEM","UTAN KAYU UTARA"], c:[-6.203, 106.862] }
+  ];
+  const chans = [
+    ["123-GM - GROMIN BEV", 9], ["122-SO - STAR OUTLET BEV", 2], ["160-TDP - GROMIN", 3],
+    ["158-TDP - RETAIL", 5], ["111-RT - RETAIL SMALL", 14], ["112-RT - RETAIL MEDIUM", 4],
+    ["404-RM - RUMAH MAKAN", 5], ["161-LOKPEN-LOKASI PENDIDIKAN", 2]
+  ];
+  const pool = [];
+  chans.forEach((c) => { for (let i = 0; i < c[1]; i++) pool.push(c[0]); });
+  const out = [];
+  areas.forEach((a, ai) => {
+    for (let i = 0; i < 26; i++){
+      const ch = pool[Math.floor(rnd() * pool.length)];
+      const big = /GROMIN|STAR/.test(ch);
+      const base = big ? 6e6 : 8e5;
+      const omset = Math.round(base * (0.25 + rnd() * rnd() * 7) / 1000) * 1000;
+      out.push({
+        kecamatan: a.kec,
+        kelurahan: a.kels[Math.floor(rnd() * a.kels.length)],
+        kode: String(2100000 + ai * 1000 + i * 7),
+        nama: (big ? "GROSIR " : "TK ") + ["MEKAR","SUMBER","BAROKAH","JAYA","SEJAHTERA","AMANAH","RIZKI","LANCAR"][Math.floor(rnd() * 8)] + " " + (i + 1) + " (CONTOH)",
+        channel: ch,
+        alamat: "JL CONTOH RT " + (1 + Math.floor(rnd() * 90)) + " NO " + (1 + Math.floor(rnd() * 60)),
+        omset: omset,
+        lat: a.c[0] + (rnd() - 0.5) * 0.045,
+        lon: a.c[1] + (rnd() - 0.5) * 0.045
+      });
+    }
+  });
+  return out;
+}
+
+/* =============== events =============== */
+$("btn-pick").onclick = () => $("file").click();
+$("btn-pick2").onclick = () => $("file").click();
+$("file").onchange = (e) => readFile(e.target.files[0]);
+const drop = $("drop");
+["dragenter","dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("hot"); }));
+["dragleave","drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("hot"); }));
+drop.addEventListener("drop", (e) => { if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]); });
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => e.preventDefault());
+
+$("sheet").onchange = (e) => {
+  const res = rowsFromSheet(S.wb, e.target.value);
+  if (res.error || !res.rows.length){ alertBox(res.error || "Sheet ini tidak berisi data."); return; }
+  $("sheet-tag").textContent = e.target.value;
+  $("fmeta").innerHTML = "<span>" + nfID.format(res.rows.length) + " baris dibaca</span><span>judul kolom di baris " + (res.headerRow + 1) + "</span>";
+  showColMap(res);
+  ingest(res.rows, { sample:false });
+};
+$("grp-list").onclick = (e) => {
+  const b = e.target.closest("[data-g]"); if (!b) return;
+  const g = b.dataset.g; S.off[g] = !S.off[g]; draw();
+};
+$("grp-all").onclick = () => { S.off = {}; draw(); };
+$("tdp-gromin").onchange = (e) => {
+  S.grominWins = e.target.checked;
+  S.raw.forEach((r) => { r.g = groupOf(r.channel, S.grominWins); });
+  rebuildChannels();
+  draw();
+};
+$("top-list").onclick = (e) => {
+  const b = e.target.closest("[data-i]"); if (!b) return;
+  const m = S.markers[b.dataset.i]; if (!m) return;
+  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 16), { duration:.6 });
+  m.openPopup();
+};
+$("area-by").onchange = () => draw();
+let qt;
+$("q").oninput = (e) => { clearTimeout(qt); qt = setTimeout(() => { S.q = e.target.value; draw(); }, 180); };
+const MINS = [[0,"Semua"],[1e6,"≥ 1 jt"],[5e6,"≥ 5 jt"],[1e7,"≥ 10 jt"],[5e7,"≥ 50 jt"]];
+$("min-chips").innerHTML = MINS.map((m, i) => '<button class="chip' + (i === 0 ? " on" : "") + '" data-v="' + m[0] + '">' + m[1] + "</button>").join("");
+$("min-chips").onclick = (e) => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  Array.from($("min-chips").children).forEach((x) => x.classList.toggle("on", x === c));
+  S.minOmset = +c.dataset.v; draw();
+};
+$("size").oninput = (e) => {
+  S.sizeMul = +e.target.value;
+  $("size-val").textContent = S.sizeMul.toFixed(1).replace(".", ",") + "×";
+  draw();
+};
+document.querySelectorAll("[data-all]").forEach((b) => {
+  b.onclick = () => {
+    const w = b.dataset.all;
+    if (w === "kec"){ S.kec.clear(); buildFilters(); }
+    else if (w === "kel"){ S.kel.clear(); rebuildDependent(); }
+    else { S.chan.clear(); rebuildChannels(); }
+    draw();
+  };
+});
+$("reset").onclick = () => {
+  S.q = ""; $("q").value = ""; S.minOmset = 0;
+  S.kec.clear(); S.kel.clear(); S.chan.clear(); S.off = {};
+  Array.from($("min-chips").children).forEach((x, i) => x.classList.toggle("on", i === 0));
+  buildFilters(); draw(); fit();
+};
+$("btn-fit").onclick = fit;
+$("btn-csv").onclick = () => downloadCSV(visible(), (S.isSample ? "contoh-" : "") + "pesebaran-omset.csv");
+$("btn-theme").onclick = () => {
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  store("po-theme", next);
+  syncTiles();
+  draw();
+};
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (!document.documentElement.getAttribute("data-theme")){ syncTiles(); draw(); }
+});
+window.addEventListener("resize", () => map.invalidateSize());
+
+/* =============== boot =============== */
+(function boot(){
+  const saved = store("po-theme");
+  if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
+  syncTiles();
+  ingest(sampleRows(), { sample:true });
+  setTimeout(() => map.invalidateSize(), 60);
+})();
+</script>
+</body>
+</html>
