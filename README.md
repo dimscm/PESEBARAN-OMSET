@@ -55,15 +55,7 @@ diperkecil lewat penggeser *Ukuran titik*.
 - **Channel** — per channel asli, lengkap dengan warna dan jumlah outlet
 - **Omset minimal** — Semua / ≥ 1 jt / ≥ 5 jt / ≥ 10 jt / ≥ 50 jt
 - **Pencarian** nama outlet, alamat, atau nomor outlet
-- **Garis batas wilayah** — Kecamatan / Kelurahan / tidak ditampilkan
 - Klik baris di **Warna channel** untuk menyembunyikan/menampilkan satu kelompok warna
-
-## Garis batas wilayah
-
-Setiap kecamatan (atau kelurahan) dilingkari garis tebal beserta nama dan total omsetnya, supaya
-terlihat wilayah mana berbatasan dengan mana. Batas ini **dihitung dari sebaran outlet itu sendiri**
-(selubung cekung/*concave hull*), bukan peta batas administratif resmi — jadi bentuknya mengikuti
-di mana outlet Anda berada, dan otomatis ikut berubah kalau Anda mengunggah data daerah lain.
 
 ## Peta dasar
 
@@ -84,10 +76,9 @@ Repositori ini hanya berisi berkas statis, jadi bisa langsung dipakai lewat GitH
 
 ```
 index.html   — seluruh aplikasi (tampilan + logika)
-vendor/      — Leaflet 1.9.4 (peta), SheetJS 0.18.5 (pembaca Excel) dan
-               concaveman 2.0.0 (penghitung garis batas), beserta lisensinya
+vendor/      — Leaflet 1.9.4 (peta) dan SheetJS 0.18.5 (pembaca Excel), beserta lisensinya
 ```
 
 Pustaka disimpan lokal supaya web tetap jalan tanpa internet; yang tetap butuh internet hanya
-gambar peta dasar (Esri/OpenStreetMap) — tanpa internet, titik dan garis batasnya tetap tampil di
-atas latar kosong.
+gambar peta dasar (Esri/OpenStreetMap) — tanpa internet, titik-titiknya tetap tampil di atas latar
+kosong.
