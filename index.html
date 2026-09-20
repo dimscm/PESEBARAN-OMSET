@@ -15,7 +15,8 @@
   --canvas:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --border:#dde3e9; --border-strong:#c6d0d9;
   --ink:#10161d; --ink-2:#3d4a57; --muted:#6c7a88;
   --accent:#0f5f96; --accent-soft:#e3f0f9;
-  --blue:#2eb3e6; --green:#1f9c57; --grey:#98a3ae;
+  --blue:#2eb3e6; --red:#d92b2b; --green:#1f9c57; --grey:#98a3ae;
+  --batas:#54687a; --batas-fill:rgba(84,104,122,.06);
   --shadow:0 1px 2px rgba(16,22,29,.06),0 8px 24px rgba(16,22,29,.07);
   --radius:10px;
   color-scheme:light;
@@ -25,7 +26,8 @@
     --canvas:#0c1116; --surface:#141b22; --surface-2:#1a232b; --border:#26323c; --border-strong:#36454f;
     --ink:#e7eef4; --ink-2:#bac7d2; --muted:#8b9aa7;
     --accent:#4fb0e8; --accent-soft:#16303f;
-    --blue:#45c3f0; --green:#35bb6c; --grey:#7f8b96;
+    --blue:#45c3f0; --red:#ff5a5a; --green:#35bb6c; --grey:#7f8b96;
+    --batas:#9fb3c4; --batas-fill:rgba(159,179,196,.07);
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
     color-scheme:dark;
   }
@@ -34,7 +36,8 @@
   --canvas:#0c1116; --surface:#141b22; --surface-2:#1a232b; --border:#26323c; --border-strong:#36454f;
   --ink:#e7eef4; --ink-2:#bac7d2; --muted:#8b9aa7;
   --accent:#4fb0e8; --accent-soft:#16303f;
-  --blue:#45c3f0; --green:#35bb6c; --grey:#7f8b96;
+  --blue:#45c3f0; --red:#ff5a5a; --green:#35bb6c; --grey:#7f8b96;
+  --batas:#9fb3c4; --batas-fill:rgba(159,179,196,.07);
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
   color-scheme:dark;
 }
@@ -123,7 +126,16 @@ button{cursor:pointer}
 .grp-row:hover{background:var(--surface-2)}
 .grp-row.off{opacity:.4}
 .dot{width:13px;height:13px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.25)}
-.dot.blue{background:var(--blue)} .dot.green{background:var(--green)} .dot.grey{background:var(--grey)}
+.dot.blue{background:var(--blue)} .dot.red{background:var(--red)}
+.dot.green{background:var(--green)} .dot.grey{background:var(--grey)}
+.batas-label{display:grid;place-items:center;pointer-events:none}
+.batas-label i{
+  font-family:Archivo,sans-serif;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink);white-space:nowrap;text-align:center;line-height:1.25;
+  padding:3px 8px;border-radius:7px;border:1px solid var(--border-strong);
+  background:color-mix(in srgb,var(--surface) 88%,transparent);box-shadow:0 1px 3px rgba(0,0,0,.14);
+}
+.batas-label b{display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:0;color:var(--ink-2)}
 .grp-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .grp-name span{display:block;font-size:11px;color:var(--muted);font-weight:400}
 .grp-val{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2);text-align:right}
@@ -144,6 +156,7 @@ button{cursor:pointer}
 .check:hover{background:var(--surface-2)}
 .check input{accent-color:var(--accent);width:14px;height:14px}
 .check .c{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.check .dot{display:inline-block;vertical-align:-1px;margin-right:5px}
 .switch-row{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--ink-2);line-height:1.35}
 .switch-row input{margin-top:2px;accent-color:var(--accent);width:15px;height:15px;flex:none}
 
@@ -307,6 +320,14 @@ button{cursor:pointer}
             <div class="checklist" id="chan-list"></div>
           </div>
           <div class="field">
+            <label for="boundary">Garis batas wilayah</label>
+            <select class="input" id="boundary">
+              <option value="kecamatan" selected>Kecamatan</option>
+              <option value="kelurahan">Kelurahan</option>
+              <option value="">Tidak ditampilkan</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="size">Ukuran titik <span class="num" id="size-val">1,0&times;</span></label>
             <input id="size" type="range" min="0.5" max="2.5" step="0.1" value="1" style="width:100%;accent-color:var(--accent)">
           </div>
@@ -346,6 +367,7 @@ button{cursor:pointer}
 
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/concaveman.js"></script>
 <script>
 "use strict";
 
@@ -444,22 +466,24 @@ function detect(rows){
 
 /* =============== channel grouping =============== */
 const GROUPS = {
-  blue: { id:"blue", name:"Gromin & Star Outlet", sub:"biru muda", color:"var(--blue)", css:"blue" },
-  green:{ id:"green", name:"TDP", sub:"hijau", color:"var(--green)", css:"green" },
-  grey: { id:"grey", name:"Channel lainnya", sub:"abu-abu", color:"var(--grey)", css:"grey" }
+  gromin:{ name:"Gromin", sub:"biru muda", css:"blue", tok:"--blue" },
+  star:  { name:"Star Outlet", sub:"merah", css:"red", tok:"--red" },
+  tdp:   { name:"TDP", sub:"hijau", css:"green", tok:"--green" },
+  lain:  { name:"Channel lainnya", sub:"abu-abu", css:"grey", tok:"--grey" }
 };
 function groupOf(channel, grominWins){
   const s = String(channel || "").toUpperCase();
   const isTDP = /\bTDP\b/.test(s);
   const isGromin = /GRO\s*-?\s*MIN|GROMIN/.test(s);
   const isStar = /STAR\s*OUTLET/.test(s) || /\bS[OL]\b\s*-/.test(s);
-  if (isTDP && isGromin) return grominWins ? "blue" : "green";
-  if (isGromin || isStar) return "blue";
-  if (isTDP) return "green";
-  return "grey";
+  if (isStar) return "star";
+  if (isTDP && isGromin) return grominWins ? "gromin" : "tdp";
+  if (isGromin) return "gromin";
+  if (isTDP) return "tdp";
+  return "lain";
 }
-const hexOf = (g) => getComputedStyle(document.documentElement).getPropertyValue(
-  g === "blue" ? "--blue" : g === "green" ? "--green" : "--grey").trim() || "#999";
+const hexOf = (g) => getComputedStyle(document.documentElement)
+  .getPropertyValue((GROUPS[g] || GROUPS.lain).tok).trim() || "#999";
 
 /* =============== state =============== */
 const S = {
@@ -473,23 +497,32 @@ const S = {
   off: {},          // hidden groups
   kec: new Set(), kel: new Set(), chan: new Set(),  // selected (empty = semua)
   q: "", minOmset: 0, sizeMul: 1,
+  boundary: "kecamatan", hulls: {}, kelOwner: {}, hullOpt: { pad:0.0012, concavity:3, smooth:0.01 },
   ref: 1, markers: null, layer: null
 };
 
 /* =============== map =============== */
 const map = L.map("map", { preferCanvas:true, zoomControl:true, worldCopyJump:true })
   .setView([-6.2, 106.9], 12);
-const TILES = {
-  "Terang (Positron)": L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    maxZoom:19, subdomains:"abcd",
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
-  "Gelap (Dark Matter)": L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom:19, subdomains:"abcd",
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
-  "Jalan (OSM)": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' })
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">Kontributor OpenStreetMap</a>';
+const ESRI_ATTR = 'Peta dasar &copy; <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, &copy; OpenStreetMap';
+const esri = (path, opts) => L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/" + path + "/MapServer/tile/{z}/{y}/{x}",
+  Object.assign({ maxZoom:19, maxNativeZoom:16, attribution:ESRI_ATTR }, opts || {}));
+const BASES = {
+  "Abu-abu terang": L.layerGroup([
+    esri("Canvas/World_Light_Gray_Base"),
+    esri("Canvas/World_Light_Gray_Reference", { attribution:"" })]),
+  "Abu-abu gelap": L.layerGroup([
+    esri("Canvas/World_Dark_Gray_Base"),
+    esri("Canvas/World_Dark_Gray_Reference", { attribution:"" })]),
+  "Peta jalan": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { maxZoom:19, attribution:OSM_ATTR }),
+  "Satelit": L.layerGroup([
+    esri("World_Imagery", { maxNativeZoom:18 }),
+    esri("Reference/World_Boundaries_and_Places", { maxNativeZoom:18, attribution:"" })])
 };
-L.control.layers(TILES, null, { position:"topright", collapsed:true }).addTo(map);
+L.control.layers(BASES, null, { position:"topright", collapsed:true }).addTo(map);
 let userPickedBase = false;
 map.on("baselayerchange", () => { userPickedBase = true; });
 function isDark(){
@@ -498,17 +531,26 @@ function isDark(){
 }
 function syncTiles(){
   if (userPickedBase) return;
-  const want = isDark() ? TILES["Gelap (Dark Matter)"] : TILES["Terang (Positron)"];
-  Object.keys(TILES).forEach((k) => { if (TILES[k] !== want && map.hasLayer(TILES[k])) map.removeLayer(TILES[k]); });
+  const want = isDark() ? BASES["Abu-abu gelap"] : BASES["Abu-abu terang"];
+  Object.keys(BASES).forEach((k) => { if (BASES[k] !== want && map.hasLayer(BASES[k])) map.removeLayer(BASES[k]); });
   if (!map.hasLayer(want)) want.addTo(map);
 }
+
+/* batas wilayah digambar di atas titik supaya tetap terlihat di area padat */
+map.createPane("batas");
+map.getPane("batas").style.zIndex = 450;
+map.getPane("batas").style.pointerEvents = "none";
+map.createPane("batasLabel");
+map.getPane("batasLabel").style.zIndex = 620;
+map.getPane("batasLabel").style.pointerEvents = "none";
+const batasLayer = L.layerGroup().addTo(map);
 
 S.layer = L.layerGroup().addTo(map);
 
 /* =============== rendering =============== */
 function radiusOf(v){
   const t = Math.max(0, Math.min(1, (v || 0) / (S.ref || 1)));
-  return (3 + 19 * Math.sqrt(t)) * S.sizeMul;
+  return (3 + 15.5 * Math.sqrt(t)) * S.sizeMul;
 }
 function visible(){
   const q = S.q.trim().toLowerCase();
@@ -533,22 +575,94 @@ function popupHTML(r){
       r.lat.toFixed(5) + ", " + r.lon.toFixed(5) +
     "</div>";
 }
+/* Satu-dua outlet dengan koordinat nyasar bisa menarik garis batas jadi runcing
+   panjang, jadi titik yang jauh sekali dari pusat wilayahnya tidak ikut dihitung. */
+function trimOutliers(pts){
+  if (pts.length < 10) return pts;
+  const lons = pts.map((p) => p[0]).sort((a, b) => a - b);
+  const lats = pts.map((p) => p[1]).sort((a, b) => a - b);
+  const cx = pct(lons, .5), cy = pct(lats, .5);
+  const kx = Math.cos(cy * Math.PI / 180);
+  const d = pts.map((p) => Math.hypot((p[0] - cx) * kx, p[1] - cy));
+  const cut = pct(d.slice().sort((a, b) => a - b), .95) * 1.8 + 0.0015;
+  const kept = pts.filter((p, i) => d[i] <= cut);
+  return kept.length >= 3 ? kept : pts;
+}
+function hullOf(pts){
+  if (!window.concaveman || pts.length < 3) return null;
+  const o = S.hullOpt, pad = o.pad, padded = [];
+  for (const p of trimOutliers(pts)) padded.push([p[0] + pad, p[1]], [p[0] - pad, p[1]], [p[0], p[1] + pad], [p[0], p[1] - pad]);
+  try {
+    const h = window.concaveman(padded, o.concavity, o.smooth);
+    return h && h.length > 3 ? h.map((q) => [q[1], q[0]]) : null;
+  } catch (e){ return null; }
+}
+function buildHulls(field){
+  const byArea = {};
+  S.rows.forEach((r) => { const k = r[field]; if (k) (byArea[k] = byArea[k] || []).push([r.lon, r.lat]); });
+  const out = {};
+  Object.keys(byArea).forEach((k) => { const h = hullOf(byArea[k]); if (h) out[k] = h; });
+  return out;
+}
+function drawBoundaries(rows){
+  batasLayer.clearLayers();
+  const by = S.boundary;
+  if (!by) return;
+  if (!S.hulls[by]) S.hulls[by] = buildHulls(by);
+  const hulls = S.hulls[by];
+  const sum = {};
+  rows.forEach((r) => { const k = r[by]; if (k) sum[k] = (sum[k] || 0) + (r.omset || 0); });
+  const cs = getComputedStyle(document.documentElement);
+  const col = cs.getPropertyValue("--batas").trim() || "#667";
+  const casing = cs.getPropertyValue("--surface").trim() || "#fff";
+  const centers = {};
+  const pts = {};
+  S.rows.forEach((r) => { const k = r[by]; if (k) (pts[k] = pts[k] || []).push(r); });
+  Object.keys(pts).forEach((k) => {
+    const la = pts[k].map((r) => r.lat).sort((a, b) => a - b);
+    const lo = pts[k].map((r) => r.lon).sort((a, b) => a - b);
+    centers[k] = [pct(la, .5), pct(lo, .5)];
+  });
+  Object.keys(hulls).forEach((k) => {
+    if (by === "kecamatan" && S.kec.size && !S.kec.has(k)) return;
+    if (by === "kelurahan"){
+      if (S.kel.size && !S.kel.has(k)) return;
+      if (S.kec.size && !S.kec.has(S.kelOwner[k])) return;
+    }
+    L.polygon(hulls[k], {
+      pane:"batas", color:casing, weight:7, opacity:.55, lineJoin:"round",
+      fill:true, fillColor:col, fillOpacity:.05, interactive:false
+    }).addTo(batasLayer);
+    const poly = L.polygon(hulls[k], {
+      pane:"batas", color:col, weight:4, opacity:.95, lineJoin:"round",
+      fill:false, interactive:false
+    }).addTo(batasLayer);
+    L.marker(centers[k] || poly.getBounds().getCenter(), {
+      pane:"batasLabel", interactive:false, keyboard:false,
+      icon: L.divIcon({ className:"batas-label", iconSize:[160,34], iconAnchor:[80,17],
+        html: "<i>" + esc(k) + (sum[k] ? "<b>" + rpShort(sum[k]) + "</b>" : "") + "</i>" })
+    }).addTo(batasLayer);
+  });
+}
 function draw(){
   const rows = visible();
   S.layer.clearLayers();
-  // biggest first so small dots stay clickable on top
-  const ordered = rows.slice().sort((a, b) => (b.omset || 0) - (a.omset || 0));
+  // channel lainnya di bawah, Star Outlet paling atas; di tiap kelompok yang besar dulu
+  // supaya titik kecil tetap terlihat dan bisa diklik
+  const ordered = rows.slice().sort((a, b) =>
+    ((a.g === "star" ? 1 : 0) - (b.g === "star" ? 1 : 0)) || ((b.omset || 0) - (a.omset || 0)));
   const byId = {};
   ordered.forEach((r) => {
     const m = L.circleMarker([r.lat, r.lon], {
-      radius: radiusOf(r.omset), fillColor: hexOf(r.g), fillOpacity: .74,
-      color: isDark() ? "#05090d" : "#123", weight: .7, opacity: .55
+      radius: radiusOf(r.omset), fillColor: hexOf(r.g), fillOpacity: .6,
+      color: isDark() ? "#05090d" : "#122", weight: .8, opacity: .5
     });
     m.bindPopup(popupHTML(r), { maxWidth: 280 });
     m.addTo(S.layer);
     byId[r._i] = m;
   });
   S.markers = byId;
+  drawBoundaries(rows);
   stats(rows);
 }
 function fit(){
@@ -570,7 +684,8 @@ function stats(rows){
   $("sum-share").textContent = allTotal ? Math.round(total / allTotal * 100) + "% dari total" : "";
 
   // groups
-  const agg = { blue:{ n:0, v:0 }, green:{ n:0, v:0 }, grey:{ n:0, v:0 } };
+  const agg = {};
+  Object.keys(GROUPS).forEach((k) => { agg[k] = { n:0, v:0 }; });
   S.rows.forEach((r) => { agg[r.g].n++; agg[r.g].v += r.omset || 0; });
   $("grp-list").innerHTML = Object.keys(GROUPS).map((k) => {
     const g = GROUPS[k];
@@ -682,6 +797,8 @@ function ingest(records, meta){
   S.isSample = !!(meta && meta.sample);
   const vals = rows.map((r) => r.omset || 0).filter((v) => v > 0).sort((a, b) => a - b);
   S.ref = pct(vals, .98) || (vals.length ? vals[vals.length - 1] : 1) || 1;
+  S.hulls = {}; S.kelOwner = {};
+  rows.forEach((r) => { if (r.kelurahan && !S.kelOwner[r.kelurahan]) S.kelOwner[r.kelurahan] = r.kecamatan; });
   S.kec.clear(); S.kel.clear(); S.chan.clear(); S.off = {};
   $("sample-banner").hidden = !S.isSample;
   $("nogeo").hidden = !noGeo.length;
@@ -865,6 +982,7 @@ $("top-list").onclick = (e) => {
   m.openPopup();
 };
 $("area-by").onchange = () => draw();
+$("boundary").onchange = (e) => { S.boundary = e.target.value; draw(); };
 let qt;
 $("q").oninput = (e) => { clearTimeout(qt); qt = setTimeout(() => { S.q = e.target.value; draw(); }, 180); };
 const MINS = [[0,"Semua"],[1e6,"≥ 1 jt"],[5e6,"≥ 5 jt"],[1e7,"≥ 10 jt"],[5e7,"≥ 50 jt"]];

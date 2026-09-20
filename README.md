@@ -36,7 +36,8 @@ dan daftarnya bisa diunduh untuk diperbaiki.
 
 | Warna | Channel |
 | --- | --- |
-| 🔵 Biru muda | Gromin & Star Outlet (mis. `123-GM - GROMIN BEV`, `122-SO - STAR OUTLET BEV`, `126-SL - STAR OUTLET LM`, `127-GMM GROMIN`) |
+| 🔵 Biru muda | Gromin (mis. `123-GM - GROMIN BEV`, `127-GMM GROMIN`) |
+| 🔴 Merah | Star Outlet (mis. `122-SO - STAR OUTLET BEV`, `126-SL - STAR OUTLET LM`) |
 | 🟢 Hijau | TDP (mis. `158-TDP - RETAIL`, `159-TDP - GROSIR`) |
 | ⚪ Abu-abu | Channel lainnya |
 
@@ -54,7 +55,21 @@ diperkecil lewat penggeser *Ukuran titik*.
 - **Channel** — per channel asli, lengkap dengan warna dan jumlah outlet
 - **Omset minimal** — Semua / ≥ 1 jt / ≥ 5 jt / ≥ 10 jt / ≥ 50 jt
 - **Pencarian** nama outlet, alamat, atau nomor outlet
+- **Garis batas wilayah** — Kecamatan / Kelurahan / tidak ditampilkan
 - Klik baris di **Warna channel** untuk menyembunyikan/menampilkan satu kelompok warna
+
+## Garis batas wilayah
+
+Setiap kecamatan (atau kelurahan) dilingkari garis tebal beserta nama dan total omsetnya, supaya
+terlihat wilayah mana berbatasan dengan mana. Batas ini **dihitung dari sebaran outlet itu sendiri**
+(selubung cekung/*concave hull*), bukan peta batas administratif resmi — jadi bentuknya mengikuti
+di mana outlet Anda berada, dan otomatis ikut berubah kalau Anda mengunggah data daerah lain.
+
+## Peta dasar
+
+Pilihan peta dasar ada di ikon lapisan kanan atas: **Abu-abu terang**, **Abu-abu gelap**
+(keduanya dari Esri), **Peta jalan** (OpenStreetMap), dan **Satelit** (Esri). Peta abu-abu dipilih
+otomatis mengikuti tema terang/gelap.
 
 Panel kiri ikut menghitung ulang: jumlah outlet, total omset, rata-rata, median, omset per wilayah,
 dan 12 outlet dengan omset tertinggi (klik untuk terbang ke titiknya di peta).
@@ -69,9 +84,10 @@ Repositori ini hanya berisi berkas statis, jadi bisa langsung dipakai lewat GitH
 
 ```
 index.html   — seluruh aplikasi (tampilan + logika)
-vendor/      — Leaflet 1.9.4 (peta) dan SheetJS 0.18.5 (pembaca Excel), beserta lisensinya
+vendor/      — Leaflet 1.9.4 (peta), SheetJS 0.18.5 (pembaca Excel) dan
+               concaveman 2.0.0 (penghitung garis batas), beserta lisensinya
 ```
 
 Pustaka disimpan lokal supaya web tetap jalan tanpa internet; yang tetap butuh internet hanya
-gambar peta dasar (OpenStreetMap/CARTO) — tanpa internet, titik-titiknya tetap tampil di atas
-latar kosong.
+gambar peta dasar (Esri/OpenStreetMap) — tanpa internet, titik dan garis batasnya tetap tampil di
+atas latar kosong.
