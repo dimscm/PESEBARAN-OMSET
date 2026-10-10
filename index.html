@@ -14,7 +14,7 @@
 :root{
   --canvas:#eef1f4; --surface:#ffffff; --surface-2:#f6f8fa; --border:#dde3e9; --border-strong:#c6d0d9;
   --ink:#10161d; --ink-2:#3d4a57; --muted:#6c7a88;
-  --accent:#0f5f96; --accent-soft:#e3f0f9;
+  --accent:#0f5f96; --accent-soft:#e3f0f9; --me:#6d3fe0;
   --blue:#2eb3e6; --red:#d92b2b; --green:#1f9c57; --grey:#98a3ae;
   --shadow:0 1px 2px rgba(16,22,29,.06),0 8px 24px rgba(16,22,29,.07);
   --radius:10px;
@@ -24,7 +24,7 @@
   :root:not([data-theme="light"]){
     --canvas:#0c1116; --surface:#141b22; --surface-2:#1a232b; --border:#26323c; --border-strong:#36454f;
     --ink:#e7eef4; --ink-2:#bac7d2; --muted:#8b9aa7;
-    --accent:#4fb0e8; --accent-soft:#16303f;
+    --accent:#4fb0e8; --accent-soft:#16303f; --me:#a98bff;
     --blue:#45c3f0; --red:#ff5a5a; --green:#35bb6c; --grey:#7f8b96;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
     color-scheme:dark;
@@ -33,7 +33,7 @@
 :root[data-theme="dark"]{
   --canvas:#0c1116; --surface:#141b22; --surface-2:#1a232b; --border:#26323c; --border-strong:#36454f;
   --ink:#e7eef4; --ink-2:#bac7d2; --muted:#8b9aa7;
-  --accent:#4fb0e8; --accent-soft:#16303f;
+  --accent:#4fb0e8; --accent-soft:#16303f; --me:#a98bff;
   --blue:#45c3f0; --red:#ff5a5a; --green:#35bb6c; --grey:#7f8b96;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
   color-scheme:dark;
@@ -175,12 +175,17 @@ button{cursor:pointer}
 }
 .me-marker{pointer-events:none}
 .me-core{
-  position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
-  background:var(--accent);border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);
+  position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;
+  background:var(--me);border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.45);
 }
 .me-pulse{
   position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
-  background:var(--accent);opacity:.35;animation:mePulse 2.1s ease-out infinite;
+  background:var(--me);opacity:.35;animation:mePulse 2.1s ease-out infinite;
+}
+.me-tag{
+  position:absolute;left:50%;top:-24px;transform:translateX(-50%);padding:1px 7px;border-radius:999px;
+  background:var(--me);color:#fff;font:600 11px/1.5 "IBM Plex Sans",system-ui,sans-serif;white-space:nowrap;
+  box-shadow:0 1px 4px rgba(0,0,0,.35)
 }
 @keyframes mePulse{0%{transform:scale(1);opacity:.4}70%{transform:scale(3.4);opacity:0}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.me-pulse{animation:none;transform:scale(2);opacity:.18}}
@@ -201,6 +206,8 @@ button{cursor:pointer}
 .map-tools{position:absolute;z-index:500;right:10px;bottom:22px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .map-card{background:var(--surface);border:1px solid var(--border-strong);border-radius:9px;box-shadow:var(--shadow);padding:9px 11px}
 .scale-legend{display:flex;align-items:flex-end;gap:12px}
+.panel-scale{display:none}
+.panel-scale .scale-legend{padding:0 4px;gap:18px}
 .scale-item{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--muted);font-size:10.5px}
 .scale-item .ring{border-radius:50%;background:color-mix(in srgb,var(--grey) 55%,transparent);border:1px solid var(--border-strong)}
 
@@ -222,14 +229,22 @@ button{cursor:pointer}
 .overlay .box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;box-shadow:var(--shadow);font-size:13px}
 
 @media (max-width:620px){
-  .sample-banner{left:10px;right:10px;transform:none;max-width:none;border-radius:10px;font-size:12px;padding:8px 10px}
+  .sample-banner{top:auto;bottom:24px;left:10px;right:10px;transform:none;max-width:none;border-radius:10px;font-size:12px;padding:8px 10px}
   .topbar{padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px))}
-  .map-tools{right:8px;bottom:26px}
-  .scale-legend{gap:9px}
+  .brand small{display:none}
+  .brand h1{font-size:15px}
+  .topbar{gap:8px}
+  .topbar-spacer{display:none}
+  .topbar-actions{gap:5px;width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .topbar-actions::-webkit-scrollbar{display:none}
+  .topbar-actions .btn-sm{flex:none;padding:5px 8px;font-size:11.5px}
+  .leaflet-control-attribution{font-size:9.5px!important;line-height:1.3}
 }
 @media (max-width:900px){
-  .toast{top:10px;bottom:auto;left:52px;right:52px;max-width:none}
-  .main{grid-template-columns:1fr;grid-template-rows:minmax(300px,46vh) 1fr;}
+  .toast{top:10px;bottom:auto;left:54px;right:64px;max-width:none}
+  .main{grid-template-columns:1fr;grid-template-rows:minmax(320px,62vh) 1fr;}
+  .map-tools{display:none}
+  .panel-scale{display:block}
   .map-wrap{order:-1;border-bottom:1px solid var(--border)}
   .panel{border-right:0;overflow-y:visible;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
   .app{height:auto;min-height:100%}
@@ -298,6 +313,10 @@ button{cursor:pointer}
         <div class="block-head"><span class="eyebrow">Warna channel</span><button class="btn-ghost btn-sm" id="grp-all">Tampilkan semua</button></div>
         <div class="block-body tight">
           <div class="grp" id="grp-list"></div>
+          <div class="panel-scale" id="panel-scale">
+            <div class="eyebrow" style="margin:10px 4px 6px">Ukuran titik = omset</div>
+            <div class="scale-legend" id="scale-legend-2"></div>
+          </div>
           <label class="switch-row" style="margin-top:8px">
             <input type="checkbox" id="tdp-gromin">
             <span>Hitung channel <b>TDP&nbsp;&ndash;&nbsp;GROMIN</b> sebagai Gromin (biru muda). Standarnya masuk TDP (hijau).</span>
@@ -643,14 +662,15 @@ function stats(rows){
 }
 function scaleLegend(){
   const vals = S.rows.map((r) => r.omset || 0).sort((a, b) => a - b);
-  if (!vals.length){ $("scale-legend").innerHTML = ""; return; }
+  if (!vals.length){ $("scale-legend").innerHTML = $("scale-legend-2").innerHTML = ""; return; }
   const picks = [pct(vals, .5), pct(vals, .9), pct(vals, .99)];
+  const rings = picks.map((v) => {
+    const d = Math.max(6, radiusOf(v) * 2);
+    return '<div class="scale-item"><span class="ring" style="width:' + d + "px;height:" + d + 'px"></span>' + rpShort(v) + "</div>";
+  }).join("");
   $("scale-legend").innerHTML =
-    '<div class="scale-item" style="align-self:center;margin-right:2px"><span style="writing-mode:horizontal-tb">Omset</span></div>' +
-    picks.map((v) => {
-      const d = Math.max(6, radiusOf(v) * 2);
-      return '<div class="scale-item"><span class="ring" style="width:' + d + "px;height:" + d + 'px"></span>' + rpShort(v) + "</div>";
-    }).join("");
+    '<div class="scale-item" style="align-self:center;margin-right:2px"><span>Omset</span></div>' + rings;
+  $("scale-legend-2").innerHTML = rings;
 }
 function checklist(el, values, sel, onchange, colored){
   const keys = Object.keys(values).sort(colored ? (a, b) => values[b] - values[a] || a.localeCompare(b)
@@ -929,12 +949,12 @@ map.on("locationfound", (e) => {
   $("btn-loc").textContent = "Lokasi aktif";
   const acc = e.accuracy || 0;
   if (!S.me.marker){
-    const acol = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f5f96";
+    const acol = getComputedStyle(document.documentElement).getPropertyValue("--me").trim() || "#6d3fe0";
     S.me.ring = L.circle(e.latlng, { radius:acc, color:acol, weight:1,
       opacity:.5, fillColor:acol, fillOpacity:.1, interactive:false }).addTo(meLayer);
     S.me.marker = L.marker(e.latlng, { zIndexOffset:1000, icon: L.divIcon({
       className:"me-marker", iconSize:[14,14], iconAnchor:[7,7],
-      html:'<span class="me-pulse"></span><span class="me-core"></span>' }) }).addTo(meLayer);
+      html:'<span class="me-pulse"></span><span class="me-core"></span><span class="me-tag">Anda</span>' }) }).addTo(meLayer);
   } else {
     S.me.marker.setLatLng(e.latlng);
     S.me.ring.setLatLng(e.latlng).setRadius(acc);

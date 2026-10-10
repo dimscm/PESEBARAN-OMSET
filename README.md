@@ -59,7 +59,8 @@ diperkecil lewat penggeser *Ukuran titik*.
 
 ## Lokasi saya
 
-Tombol **Lokasi saya** di kanan atas menandai posisi Anda sekarang dengan titik biru tua berdenyut,
+Tombol **Lokasi saya** di kanan atas menandai posisi Anda sekarang dengan titik **ungu** berlabel "Anda" —
+warna yang tidak dipakai channel mana pun, jadi tidak tertukar dengan outlet —
 beserta lingkaran perkiraan akurasinya. Peta langsung terbang ke titik itu, dan klik titiknya untuk
 melihat koordinat, akurasi, serta **outlet terdekat** beserta jaraknya. Posisi ikut bergerak selama
 tombolnya menyala — klik sekali lagi untuk berhenti.
