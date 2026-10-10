@@ -173,6 +173,25 @@ button{cursor:pointer}
   display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;
   background:var(--accent-soft);border:1px solid var(--border);font-size:12.5px;color:var(--ink-2)
 }
+.me-marker{pointer-events:none}
+.me-core{
+  position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  background:var(--accent);border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);
+}
+.me-pulse{
+  position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+  background:var(--accent);opacity:.35;animation:mePulse 2.1s ease-out infinite;
+}
+@keyframes mePulse{0%{transform:scale(1);opacity:.4}70%{transform:scale(3.4);opacity:0}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.me-pulse{animation:none;transform:scale(2);opacity:.18}}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.on:hover{background:var(--accent);filter:brightness(1.08)}
+.toast{
+  position:absolute;z-index:700;left:12px;bottom:26px;
+  max-width:min(420px,calc(100% - 270px));padding:9px 13px;border-radius:9px;font-size:12.5px;line-height:1.4;
+  background:var(--surface);border:1px solid var(--border-strong);box-shadow:var(--shadow);color:var(--ink-2);
+}
+.toast b{color:var(--ink)}
 .sample-banner{
   position:absolute;z-index:500;top:10px;left:50%;transform:translateX(-50%);
   display:flex;align-items:center;gap:10px;padding:7px 10px 7px 13px;border-radius:999px;
@@ -209,6 +228,7 @@ button{cursor:pointer}
   .scale-legend{gap:9px}
 }
 @media (max-width:900px){
+  .toast{top:10px;bottom:auto;left:52px;right:52px;max-width:none}
   .main{grid-template-columns:1fr;grid-template-rows:minmax(300px,46vh) 1fr;}
   .map-wrap{order:-1;border-bottom:1px solid var(--border)}
   .panel{border-right:0;overflow-y:visible;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
@@ -232,6 +252,7 @@ button{cursor:pointer}
     <div class="topbar-actions">
       <button class="btn btn-sm" id="btn-fit" title="Perbesar peta ke seluruh titik yang tampil">Zoom ke data</button>
       <button class="btn btn-sm" id="btn-csv" title="Unduh data yang sedang tampil">Unduh CSV</button>
+      <button class="btn btn-sm" id="btn-loc" title="Tandai posisi Anda sekarang di peta">Lokasi saya</button>
       <button class="btn btn-sm" id="btn-theme" title="Ganti tema terang/gelap" aria-label="Ganti tema">Tema</button>
     </div>
   </header>
@@ -341,6 +362,7 @@ button{cursor:pointer}
           <div class="scale-legend" id="scale-legend"></div>
         </div>
       </div>
+      <div class="toast" id="toast" hidden></div>
       <div class="overlay" id="overlay" hidden><div class="box">Membaca file&hellip;</div></div>
     </div>
   </div>
@@ -477,7 +499,8 @@ const S = {
   off: {},          // hidden groups
   kec: new Set(), kel: new Set(), chan: new Set(),  // selected (empty = semua)
   q: "", minOmset: 0, sizeMul: 1,
-  ref: 1, markers: null, layer: null
+  ref: 1, markers: null, layer: null,
+  me: { on:false, marker:null, ring:null, first:true }
 };
 
 /* =============== map =============== */
@@ -563,6 +586,7 @@ function draw(){
     byId[r._i] = m;
   });
   S.markers = byId;
+  if (S.me.marker) S.me.marker.setPopupContent(mePopup(S.me.marker.getLatLng(), S.me.ring ? S.me.ring.getRadius() : 0));
   stats(rows);
 }
 function fit(){
@@ -843,7 +867,102 @@ function sampleRows(){
   return out;
 }
 
+/* =============== lokasi saya =============== */
+const meLayer = L.layerGroup().addTo(map);
+let toastTimer;
+function toast(html, ms){
+  clearTimeout(toastTimer);
+  const el = $("toast");
+  el.innerHTML = html;
+  el.hidden = false;
+  if (ms) toastTimer = setTimeout(() => { el.hidden = true; }, ms);
+}
+function hideToast(){ clearTimeout(toastTimer); $("toast").hidden = true; }
+
+/* jarak garis lurus (meter) */
+function metersBetween(a, b){
+  const R = 6371000, toRad = Math.PI / 180;
+  const dLat = (b[0] - a[0]) * toRad, dLon = (b[1] - a[1]) * toRad;
+  const la = a[0] * toRad, lb = b[0] * toRad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(la) * Math.cos(lb) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const jarak = (m) => m >= 1000 ? (m / 1000).toFixed(1).replace(".", ",") + " km" : Math.round(m) + " m";
+
+function nearestOutlet(latlng){
+  let best = null, bestD = Infinity;
+  visible().forEach((r) => {
+    const d = metersBetween([latlng.lat, latlng.lng], [r.lat, r.lon]);
+    if (d < bestD){ bestD = d; best = r; }
+  });
+  return best ? { row: best, d: bestD } : null;
+}
+function mePopup(latlng, acc){
+  const n = nearestOutlet(latlng);
+  return '<div class="pop-title">Lokasi Anda sekarang</div>' +
+    '<div class="pop-meta">' + latlng.lat.toFixed(5) + ", " + latlng.lng.toFixed(5) +
+    (acc ? " &middot; akurasi &plusmn;" + Math.round(acc) + " m" : "") + "</div>" +
+    (n ? '<div class="pop-meta" style="margin-top:6px">Outlet terdekat: <b style="color:var(--ink)">' +
+      esc(n.row.nama || "(tanpa nama)") + "</b><br>" + jarak(n.d) + " &middot; " + rpShort(n.row.omset) + "</div>" : "");
+}
+function stopMe(){
+  map.stopLocate();
+  meLayer.clearLayers();
+  S.me = { on:false, marker:null, ring:null, first:true };
+  $("btn-loc").classList.remove("on");
+  $("btn-loc").textContent = "Lokasi saya";
+  hideToast();
+}
+function startMe(){
+  if (!navigator.geolocation){
+    toast("Browser ini tidak mendukung layanan lokasi.", 6000);
+    return;
+  }
+  S.me.on = true; S.me.first = true;
+  $("btn-loc").classList.add("on");
+  $("btn-loc").textContent = "Mencari\u2026";
+  toast("Mencari posisi Anda\u2026 izinkan akses lokasi bila diminta.");
+  map.locate({ watch:true, enableHighAccuracy:true, timeout:20000, maximumAge:5000 });
+}
+map.on("locationfound", (e) => {
+  if (!S.me.on) return;
+  $("btn-loc").textContent = "Lokasi aktif";
+  const acc = e.accuracy || 0;
+  if (!S.me.marker){
+    const acol = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#0f5f96";
+    S.me.ring = L.circle(e.latlng, { radius:acc, color:acol, weight:1,
+      opacity:.5, fillColor:acol, fillOpacity:.1, interactive:false }).addTo(meLayer);
+    S.me.marker = L.marker(e.latlng, { zIndexOffset:1000, icon: L.divIcon({
+      className:"me-marker", iconSize:[14,14], iconAnchor:[7,7],
+      html:'<span class="me-pulse"></span><span class="me-core"></span>' }) }).addTo(meLayer);
+  } else {
+    S.me.marker.setLatLng(e.latlng);
+    S.me.ring.setLatLng(e.latlng).setRadius(acc);
+  }
+  S.me.marker.bindPopup(mePopup(e.latlng, acc), { maxWidth:260 });
+  if (S.me.first){
+    S.me.first = false;
+    map.flyTo(e.latlng, Math.max(map.getZoom(), 15), { duration:.8 });
+    const n = nearestOutlet(e.latlng);
+    toast("<b>Posisi Anda ditandai.</b> Akurasi &plusmn;" + Math.round(acc) + " m" +
+      (n ? " &middot; outlet terdekat " + esc(n.row.nama) + " (" + jarak(n.d) + ")" : ""), 7000);
+  }
+});
+map.on("locationerror", (e) => {
+  if (!S.me.on) return;
+  const denied = e.code === 1 || /denied|permission/i.test(e.message || "");
+  const timeout = e.code === 3;
+  stopMe();
+  toast(denied
+    ? "<b>Izin lokasi ditolak.</b> Aktifkan izin lokasi untuk situs ini di pengaturan browser, lalu coba lagi."
+    : timeout
+      ? "<b>Lokasi belum didapat.</b> Pastikan izin lokasi sudah diizinkan dan GPS aktif, lalu coba lagi."
+      : "<b>Lokasi tidak bisa diambil.</b> Layanan lokasi butuh koneksi aman (https).", 9000);
+});
+
 /* =============== events =============== */
+$("btn-loc").onclick = () => { S.me.on ? stopMe() : startMe(); };
+
 $("btn-pick").onclick = () => $("file").click();
 $("btn-pick2").onclick = () => $("file").click();
 $("file").onchange = (e) => readFile(e.target.files[0]);

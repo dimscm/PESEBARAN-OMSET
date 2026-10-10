@@ -57,6 +57,17 @@ diperkecil lewat penggeser *Ukuran titik*.
 - **Pencarian** nama outlet, alamat, atau nomor outlet
 - Klik baris di **Warna channel** untuk menyembunyikan/menampilkan satu kelompok warna
 
+## Lokasi saya
+
+Tombol **Lokasi saya** di kanan atas menandai posisi Anda sekarang dengan titik biru tua berdenyut,
+beserta lingkaran perkiraan akurasinya. Peta langsung terbang ke titik itu, dan klik titiknya untuk
+melihat koordinat, akurasi, serta **outlet terdekat** beserta jaraknya. Posisi ikut bergerak selama
+tombolnya menyala — klik sekali lagi untuk berhenti.
+
+Browser akan meminta izin lokasi saat pertama kali dipakai. Fitur ini hanya jalan lewat alamat
+`https://` (seperti GitHub Pages) atau `localhost`; kalau `index.html` dibuka langsung dari file di
+komputer, browser memblokir layanan lokasi.
+
 ## Peta dasar
 
 Pilihan peta dasar ada di ikon lapisan kanan atas: **Abu-abu terang**, **Abu-abu gelap**
