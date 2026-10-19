@@ -1,14 +1,19 @@
 # Pesebaran Omset Outlet
 
-Web untuk melihat **pesebaran omset outlet di peta**. Data tidak ditanam di dalam web —
-Anda **unggah sendiri file Excel**-nya, jadi daerah mana pun bisa memakai web yang sama.
+Web untuk melihat **pesebaran omset outlet di peta**. Web ini membawa **data bawaan** dari
+`LOKASI_3_2_1.xlsx` (Grosir Minuman Jaktim, `data/lokasi.js`) yang langsung tampil saat dibuka.
+Anda tetap bisa **unggah file Excel lain** untuk menggantinya, jadi daerah mana pun bisa memakai web yang sama.
+
+> Repositori ini publik, jadi isi `data/lokasi.js` (nama toko, salesman, omset) bisa dilihat siapa pun
+> yang tahu alamatnya. Untuk mengganti data bawaan, timpa file itu; untuk menghapusnya, hapus file itu
+> dan web kembali ke data contoh.
 
 ## Cara pakai
 
 1. Buka `index.html` (klik dua kali, atau lewat alamat web kalau sudah di-hosting).
 2. Klik **Pilih file Excel** atau tarik file `.xlsx` / `.xls` / `.csv` ke kotak unggah.
-3. Peta langsung terisi. Saat pertama dibuka, web menampilkan **data contoh** supaya
-   terlihat bentuk akhirnya — data contoh hilang begitu file Anda diunggah.
+3. Peta langsung terisi dengan file Anda menggantikan data bawaan. Tanpa `data/lokasi.js`, web
+   menampilkan **data contoh** sampai file diunggah.
 
 File Anda diproses **di browser Anda sendiri**. Tidak ada data yang dikirim ke server mana pun.
 
@@ -74,7 +79,7 @@ satunya ikut mengubah yang lain.
 
 File yang terakhir diunggah disimpan di browser itu sendiri (IndexedDB), jadi saat web dibuka lagi
 di HP/komputer yang sama datanya langsung tampil tanpa unggah ulang. Tidak ada yang dikirim ke server.
-Tombol **Hapus dari browser** di panel Sumber data menghapusnya.
+Tombol **Kembali ke data bawaan** di panel Sumber data menghapusnya.
 
 ## Lokasi saya
 
