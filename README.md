@@ -21,10 +21,12 @@ Baris judul kolom dicari otomatis (tidak harus di baris pertama):
 | Kecamatan | Kec, District |
 | Kelurahan | Kel, Desa, Village |
 | No Outlet | Kode Outlet, Outlet ID |
-| Nama Outlet | Nama, Outlet Name, Pelanggan |
+| Nama Outlet | Nama Toko, Nama, Outlet Name, Pelanggan |
 | Channel | Chanel, Kanal, Tipe Outlet |
 | Alamat | Address |
-| Omset | Omzet, Penjualan, Sales, Revenue, Nilai |
+| Omset | Omzet, Penjualan, Sales, Revenue, Nilai (kolom omset pertama yang dipakai, mis. `Omzet 26 Week`) |
+| Salesman | Nama Salesman |
+| Status | — |
 | Long | Longitude, Lng, Bujur, X |
 | Lat | Latitude, Lintang, Y |
 
@@ -56,6 +58,23 @@ diperkecil lewat penggeser *Ukuran titik*.
 - **Omset minimal** — Semua / ≥ 1 jt / ≥ 5 jt / ≥ 10 jt / ≥ 50 jt
 - **Pencarian** nama outlet, alamat, atau nomor outlet
 - Klik baris di **Warna channel** untuk menyembunyikan/menampilkan satu kelompok warna
+
+## Toko terdekat dari saya
+
+Panel paling atas. Pilih **Kelurahan** (atau biarkan *Semua kelurahan*), lalu tekan
+**Cari toko terdekat dari lokasi saya**. Daftar toko diurutkan dari yang paling dekat dengan posisi
+Anda, lengkap dengan jarak garis lurus, kelurahan, dan omset; daftarnya ikut diperbarui saat Anda
+bergerak dan saat filter diubah. Klik nama toko untuk terbang ke titiknya, atau **Rute** untuk membuka
+petunjuk arah di Google Maps. Popup setiap titik juga punya tombol **Rute ke sini** dan **Buka di Maps**.
+
+Pilihan kelurahan di panel ini sama dengan checklist Kelurahan di bagian Filter — mengubah salah
+satunya ikut mengubah yang lain.
+
+## File tersimpan di browser
+
+File yang terakhir diunggah disimpan di browser itu sendiri (IndexedDB), jadi saat web dibuka lagi
+di HP/komputer yang sama datanya langsung tampil tanpa unggah ulang. Tidak ada yang dikirim ke server.
+Tombol **Hapus dari browser** di panel Sumber data menghapusnya.
 
 ## Lokasi saya
 
