@@ -60,7 +60,7 @@ diperkecil lewat penggeser *Ukuran titik*.
 
 - **Kecamatan** dan **Kelurahan** (pilihan kelurahan menyesuaikan kecamatan yang dipilih)
 - **Channel** — per channel asli, lengkap dengan warna dan jumlah outlet
-- **Omset minimal** — Semua / ≥ 1 jt / ≥ 5 jt / ≥ 10 jt / ≥ 50 jt
+- **Omset** — Semua / < 10 jt / 10–25 jt / 25–50 jt / 50–100 jt / 100–200 jt / ≥ 200 jt (juga ada di panel Toko terdekat; keduanya selalu sama)
 - **Pencarian** nama outlet, alamat, atau nomor outlet
 - Klik baris di **Warna channel** untuk menyembunyikan/menampilkan satu kelompok warna
 

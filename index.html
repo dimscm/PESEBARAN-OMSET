@@ -298,6 +298,10 @@ button{cursor:pointer}
               <label for="kel-quick">Kelurahan</label>
               <select class="input" id="kel-quick"></select>
             </div>
+            <div class="field" style="margin:0">
+              <label for="omset-quick">Omset</label>
+              <select class="input" id="omset-quick"></select>
+            </div>
             <button class="btn btn-primary" id="btn-near" type="button" style="justify-content:center">Cari toko terdekat dari lokasi saya</button>
           </div>
           <ol class="near-list" id="near-list"></ol>
@@ -365,7 +369,7 @@ button{cursor:pointer}
             <input class="input" id="q" type="search" placeholder="mis. TK RAYA ABADI">
           </div>
           <div class="field">
-            <label>Omset minimal</label>
+            <label>Omset</label>
             <div class="chips" id="min-chips"></div>
           </div>
           <div class="field" id="kec-field">
@@ -541,6 +545,17 @@ function groupOf(channel, grominWins){
 const hexOf = (g) => getComputedStyle(document.documentElement)
   .getPropertyValue((GROUPS[g] || GROUPS.lain).tok).trim() || "#999";
 
+/* =============== rentang omset (Omzet 26 Week) =============== */
+const BANDS = [
+  [0, Infinity, "Semua"],
+  [0, 1e7, "< 10 jt"],
+  [1e7, 2.5e7, "10–25 jt"],
+  [2.5e7, 5e7, "25–50 jt"],
+  [5e7, 1e8, "50–100 jt"],
+  [1e8, 2e8, "100–200 jt"],
+  [2e8, Infinity, "≥ 200 jt"]
+];
+
 /* =============== state =============== */
 const S = {
   raw: [],          // all parsed rows (mapped)
@@ -552,7 +567,7 @@ const S = {
   grominWins: false,
   off: {},          // hidden groups
   kec: new Set(), kel: new Set(), chan: new Set(),  // selected (empty = semua)
-  q: "", minOmset: 0, sizeMul: 1,
+  q: "", band: 0, sizeMul: 1,
   ref: 1, markers: null, layer: null,
   me: { on:false, marker:null, ring:null, first:true }
 };
@@ -606,7 +621,8 @@ function visible(){
     if (S.kec.size && !S.kec.has(r.kecamatan)) return false;
     if (S.kel.size && !S.kel.has(r.kelurahan)) return false;
     if (S.chan.size && !S.chan.has(r.channel || "(tanpa channel)")) return false;
-    if (S.minOmset && (r.omset || 0) < S.minOmset) return false;
+    const b = BANDS[S.band], o = r.omset || 0;
+    if (o < b[0] || o >= b[1]) return false;
     if (q && r.hay.indexOf(q) === -1) return false;
     return true;
   });
@@ -1196,13 +1212,20 @@ $("top-list").onclick = (e) => {
 $("area-by").onchange = () => draw();
 let qt;
 $("q").oninput = (e) => { clearTimeout(qt); qt = setTimeout(() => { S.q = e.target.value; draw(); }, 180); };
-const MINS = [[0,"Semua"],[1e6,"≥ 1 jt"],[5e6,"≥ 5 jt"],[1e7,"≥ 10 jt"],[5e7,"≥ 50 jt"]];
-$("min-chips").innerHTML = MINS.map((m, i) => '<button class="chip' + (i === 0 ? " on" : "") + '" data-v="' + m[0] + '">' + m[1] + "</button>").join("");
+$("min-chips").innerHTML = BANDS.map((b, i) => '<button class="chip" data-v="' + i + '">' + b[2] + "</button>").join("");
+$("omset-quick").innerHTML = BANDS.map((b, i) => '<option value="' + i + '">' + (i ? b[2] : "Semua omset") + "</option>").join("");
+function setBand(i){
+  S.band = i;
+  Array.from($("min-chips").children).forEach((x) => x.classList.toggle("on", +x.dataset.v === i));
+  $("omset-quick").value = String(i);
+  nearN = NEAR_STEP;
+}
+setBand(0);
 $("min-chips").onclick = (e) => {
   const c = e.target.closest(".chip"); if (!c) return;
-  Array.from($("min-chips").children).forEach((x) => x.classList.toggle("on", x === c));
-  S.minOmset = +c.dataset.v; draw();
+  setBand(+c.dataset.v); draw();
 };
+$("omset-quick").onchange = (e) => { setBand(+e.target.value); draw(); };
 $("size").oninput = (e) => {
   S.sizeMul = +e.target.value;
   $("size-val").textContent = S.sizeMul.toFixed(1).replace(".", ",") + "×";
@@ -1218,9 +1241,8 @@ document.querySelectorAll("[data-all]").forEach((b) => {
   };
 });
 $("reset").onclick = () => {
-  S.q = ""; $("q").value = ""; S.minOmset = 0;
+  S.q = ""; $("q").value = ""; setBand(0);
   S.kec.clear(); S.kel.clear(); S.chan.clear(); S.off = {};
-  Array.from($("min-chips").children).forEach((x, i) => x.classList.toggle("on", i === 0));
   buildFilters(); draw(); fit();
 };
 $("btn-fit").onclick = fit;
