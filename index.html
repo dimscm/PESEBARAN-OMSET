@@ -168,6 +168,21 @@ button{cursor:pointer}
 .area-row .nm{font-size:12.5px}
 .area-row .vl{font-family:"IBM Plex Mono",monospace;font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 
+/* toko terdekat */
+.near-block{border-color:color-mix(in srgb,var(--me) 45%,var(--border))}
+.near-top{display:flex;flex-direction:column;gap:9px}
+.near-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column}
+.near-list li{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:7px 2px;border-top:1px solid var(--border)}
+.near-list li:first-child{border-top:0}
+.near-list .d{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--me);min-width:52px;font-variant-numeric:tabular-nums}
+.near-list .go{border:0;background:transparent;text-align:left;padding:0;min-width:0}
+.near-list .nm{display:block;font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.near-list .sub{display:block;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.near-list .route{font-size:11.5px;text-decoration:none}
+.pop-actions{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.pop-actions a{text-decoration:none}
+.leaflet-popup-content .pop-actions a.btn-primary{color:#fff}
+
 .note{font-size:12px;color:var(--muted);line-height:1.5}
 .warn{
   display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;
@@ -274,6 +289,22 @@ button{cursor:pointer}
 
   <div class="main">
     <aside class="panel" id="panel">
+      <!-- TOKO TERDEKAT -->
+      <section class="block near-block">
+        <div class="block-head"><span class="eyebrow">Toko terdekat dari saya</span><span class="eyebrow num" id="near-count"></span></div>
+        <div class="block-body">
+          <div class="near-top">
+            <div class="field" style="margin:0">
+              <label for="kel-quick">Kelurahan</label>
+              <select class="input" id="kel-quick"></select>
+            </div>
+            <button class="btn btn-primary" id="btn-near" type="button" style="justify-content:center">Cari toko terdekat dari lokasi saya</button>
+          </div>
+          <ol class="near-list" id="near-list"></ol>
+          <button class="btn-ghost btn-sm" id="near-more" type="button" hidden>Tampilkan lebih banyak</button>
+        </div>
+      </section>
+
       <!-- SUMBER DATA -->
       <section class="block">
         <div class="block-head"><span class="eyebrow">Sumber data</span><span class="eyebrow" id="sheet-tag"></span></div>
@@ -290,6 +321,7 @@ button{cursor:pointer}
             <select class="input" id="sheet"></select>
           </div>
           <div id="map-cols" class="block-body tight" style="padding:0;margin-top:10px" hidden></div>
+          <p class="note" id="saved-note" style="margin-top:10px" hidden>File ini tersimpan di browser ini saja, jadi langsung terbuka lagi saat web dibuka berikutnya. <button class="btn-ghost btn-sm" id="btn-forget" type="button">Hapus dari browser</button></p>
           <p class="note" style="margin-top:10px">Kolom dibaca otomatis: <b>Kecamatan, Kelurahan, No Outlet, Nama Outlet, Channel, Alamat, Omset, Long, Lat</b>. Nama kolom lain yang sejenis juga dikenali.</p>
         </div>
       </section>
@@ -456,10 +488,12 @@ const FIELDS = [
   { key:"kecamatan", label:"Kecamatan", pats:[/^kec(amatan)?$/, /kecamatan/, /district/] },
   { key:"kelurahan", label:"Kelurahan", pats:[/^kel(urahan)?$/, /kelurahan/, /desa/, /village/] },
   { key:"kode",      label:"No Outlet", pats:[/no\.?\s*outlet/, /kode\s*outlet/, /outlet\s*(id|code)/, /^kode$/, /^id$/] },
-  { key:"nama",      label:"Nama Outlet", pats:[/nama\s*outlet/, /outlet\s*name/, /^nama$/, /^name$/, /pelanggan/, /customer/] },
+  { key:"nama",      label:"Nama Outlet", pats:[/nama\s*outlet/, /nama\s*toko/, /outlet\s*name/, /^nama$/, /^name$/, /^toko$/, /pelanggan/, /customer/] },
   { key:"channel",   label:"Channel", pats:[/cha?nn?el/, /kanal/, /tipe\s*outlet/, /segment/] },
   { key:"alamat",    label:"Alamat", pats:[/alamat/, /address/] },
-  { key:"omset",     label:"Omset", pats:[/oms?[ez]t/, /penjualan/, /revenue/, /^sales/, /value/, /nilai/] },
+  { key:"omset",     label:"Omset", pats:[/oms?[ez]t/, /penjualan/, /revenue/, /^sales(?!man)/, /value/, /nilai/] },
+  { key:"salesman",  label:"Salesman", pats:[/salesman/, /^sales\s*name/, /^nama\s*sales/, /^sales$/] },
+  { key:"status",    label:"Status", pats:[/^status/] },
   { key:"lon",       label:"Longitude", pats:[/^long?$/, /longitude/, /^lng$/, /bujur/, /^x$/] },
   { key:"lat",       label:"Latitude", pats:[/^lat$/, /latitude/, /lintang/, /^y$/] }
 ];
@@ -583,9 +617,19 @@ function popupHTML(r){
     '<div class="pop-meta">' +
       (r.kelurahan || r.kecamatan ? esc([r.kelurahan, r.kecamatan].filter(Boolean).join(", ")) + "<br>" : "") +
       (r.alamat ? esc(r.alamat) + "<br>" : "") +
+      (r.salesman ? "Salesman " + esc(r.salesman) + "<br>" : "") +
       (r.kode ? "No. outlet " + esc(r.kode) + " &middot; " : "") +
+      (r.status ? "Status " + esc(r.status) + " &middot; " : "") +
       r.lat.toFixed(5) + ", " + r.lon.toFixed(5) +
-    "</div>";
+      (S.me.marker ? "<br>Jarak dari Anda: <b>" + jarak(metersBetween(meLL(), [r.lat, r.lon])) + "</b>" : "") +
+    "</div>" +
+    '<div class="pop-actions"><a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="' + routeURL(r) + '">Rute ke sini</a>' +
+    '<a class="btn btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + r.lat + "," + r.lon + '">Buka di Maps</a></div>';
+}
+function meLL(){ const l = S.me.marker.getLatLng(); return [l.lat, l.lng]; }
+function routeURL(r){
+  return "https://www.google.com/maps/dir/?api=1" +
+    (S.me.marker ? "&origin=" + meLL().join(",") : "") + "&destination=" + r.lat + "," + r.lon;
 }
 function draw(){
   const rows = visible();
@@ -600,13 +644,15 @@ function draw(){
       radius: radiusOf(r.omset), fillColor: hexOf(r.g), fillOpacity: .6,
       color: isDark() ? "#05090d" : "#122", weight: .8, opacity: .5
     });
-    m.bindPopup(popupHTML(r), { maxWidth: 280 });
+    m.bindPopup(() => popupHTML(r), { maxWidth: 280 });  // dibuat saat dibuka, supaya jarak & rute ikut posisi terbaru
     m.addTo(S.layer);
     byId[r._i] = m;
   });
   S.markers = byId;
   if (S.me.marker) S.me.marker.setPopupContent(mePopup(S.me.marker.getLatLng(), S.me.ring ? S.me.ring.getRadius() : 0));
   stats(rows);
+  nearList(rows);
+  syncKelQuick();
 }
 function fit(){
   const rows = visible();
@@ -724,7 +770,7 @@ function ingest(records, meta){
   records.forEach((r, i) => {
     r._i = i;
     r.g = groupOf(r.channel, S.grominWins);
-    r.hay = [r.nama, r.alamat, r.kode, r.channel].join(" ").toLowerCase();
+    r.hay = [r.nama, r.alamat, r.kode, r.channel, r.salesman].join(" ").toLowerCase();
     const okLat = r.lat != null && r.lat !== 0 && Math.abs(r.lat) <= 90;
     const okLon = r.lon != null && r.lon !== 0 && Math.abs(r.lon) <= 180;
     if (okLat && okLon) rows.push(r); else noGeo.push(r);
@@ -771,6 +817,8 @@ function rowsFromSheet(wb, sheetName){
       nama: str("nama"),
       channel: str("channel"),
       alamat: str("alamat"),
+      salesman: str("salesman"),
+      status: str("status"),
       omset: toNum(get("omset")) || 0,
       lon: toCoord(get("lon")),
       lat: toCoord(get("lat"))
@@ -824,6 +872,10 @@ function readFile(file){
     try {
       const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array", cellDates:false });
       loadWorkbook(wb, file.name);
+      if (!S.isSample){
+        IDB.put({ name:file.name, buf:e.target.result })
+          .then(() => { $("saved-note").hidden = false; }).catch(() => {});
+      }
     } catch (err){
       alertBox("File tidak bisa dibaca: " + err.message);
     } finally {
@@ -836,8 +888,8 @@ function readFile(file){
 
 /* =============== CSV =============== */
 function downloadCSV(rows, name){
-  const cols = ["kecamatan","kelurahan","kode","nama","channel","alamat","omset","lon","lat"];
-  const head = ["Kecamatan","Kelurahan","No Outlet","Nama Outlet","Channel","Alamat","Omset","Long","Lat","Kelompok Warna"];
+  const cols = ["kecamatan","kelurahan","kode","nama","channel","alamat","salesman","status","omset","lon","lat"];
+  const head = ["Kecamatan","Kelurahan","No Outlet","Nama Outlet","Channel","Alamat","Salesman","Status","Omset","Long","Lat","Kelompok Warna"];
   const q = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
   const body = rows.map((r) => cols.map((c) => q(r[c])).concat(q(GROUPS[r.g] ? GROUPS[r.g].name : "")).join(","));
   const csv = "﻿" + head.map(q).join(",") + "\n" + body.join("\n");
@@ -931,7 +983,9 @@ function stopMe(){
   S.me = { on:false, marker:null, ring:null, first:true };
   $("btn-loc").classList.remove("on");
   $("btn-loc").textContent = "Lokasi saya";
+  $("btn-near").textContent = "Cari toko terdekat dari lokasi saya";
   hideToast();
+  nearList(visible());
 }
 function startMe(){
   if (!navigator.geolocation){
@@ -943,6 +997,7 @@ function startMe(){
   $("btn-loc").textContent = "Mencari\u2026";
   toast("Mencari posisi Anda\u2026 izinkan akses lokasi bila diminta.");
   map.locate({ watch:true, enableHighAccuracy:true, timeout:20000, maximumAge:5000 });
+  nearList(visible());
 }
 map.on("locationfound", (e) => {
   if (!S.me.on) return;
@@ -960,6 +1015,8 @@ map.on("locationfound", (e) => {
     S.me.ring.setLatLng(e.latlng).setRadius(acc);
   }
   S.me.marker.bindPopup(mePopup(e.latlng, acc), { maxWidth:260 });
+  nearList(visible());
+  $("btn-near").textContent = "Lihat posisi saya di peta";
   if (S.me.first){
     S.me.first = false;
     map.flyTo(e.latlng, Math.max(map.getZoom(), 15), { duration:.8 });
@@ -979,6 +1036,106 @@ map.on("locationerror", (e) => {
       ? "<b>Lokasi belum didapat.</b> Pastikan izin lokasi sudah diizinkan dan GPS aktif, lalu coba lagi."
       : "<b>Lokasi tidak bisa diambil.</b> Layanan lokasi butuh koneksi aman (https).", 9000);
 });
+
+/* =============== toko terdekat =============== */
+const NEAR_STEP = 10;
+let nearN = NEAR_STEP;
+function nearList(rows){
+  const el = $("near-list");
+  $("near-count").textContent = "";
+  if (!S.me.marker){
+    el.innerHTML = '<li style="display:block"><span class="note">' + (S.me.on
+      ? "Mencari posisi Anda&hellip;"
+      : "Tekan tombol di atas &mdash; daftar toko diurutkan dari yang paling dekat. Pilih kelurahan dulu bila perlu.") + "</span></li>";
+    $("near-more").hidden = true;
+    return;
+  }
+  const me = meLL();
+  const list = rows.map((r) => ({ r, d: metersBetween(me, [r.lat, r.lon]) })).sort((a, b) => a.d - b.d);
+  $("near-count").textContent = nfID.format(list.length) + " toko";
+  if (!list.length){
+    el.innerHTML = '<li style="display:block"><span class="note">Tidak ada toko yang cocok dengan filter.</span></li>';
+    $("near-more").hidden = true;
+    return;
+  }
+  el.innerHTML = list.slice(0, nearN).map((x) =>
+    '<li><span class="d">' + jarak(x.d) + "</span>" +
+    '<button class="go" type="button" data-i="' + x.r._i + '"><span class="nm">' + esc(x.r.nama || "(tanpa nama)") + "</span>" +
+    '<span class="sub">' + esc([x.r.kelurahan, rpShort(x.r.omset)].filter(Boolean).join(" · ")) + "</span></button>" +
+    '<a class="btn btn-sm route" target="_blank" rel="noopener" href="' + routeURL(x.r) + '">Rute</a></li>').join("");
+  $("near-more").hidden = list.length <= nearN;
+}
+function kelOptions(){
+  // kelurahan yang tersedia mengikuti kecamatan yang dipilih
+  const c = countBy("kelurahan", true, false);
+  return Object.keys(c).sort((a, b) => a.localeCompare(b)).map((k) => [k, c[k]]);
+}
+function syncKelQuick(){
+  const sel = $("kel-quick");
+  const opts = kelOptions();
+  const one = S.kel.size === 1 ? Array.from(S.kel)[0] : "";
+  let html = '<option value="">Semua kelurahan</option>';
+  if (S.kel.size > 1) html = '<option value="*">' + S.kel.size + " kelurahan dipilih</option>" + html;
+  html += opts.map((o) => '<option value="' + esc(o[0]) + '">' + esc(o[0]) + " (" + o[1] + ")</option>").join("");
+  sel.innerHTML = html;
+  sel.value = S.kel.size > 1 ? "*" : one;
+  sel.disabled = !opts.length;
+}
+$("kel-quick").onchange = (e) => {
+  const v = e.target.value;
+  if (v === "*") return;
+  S.kel.clear();
+  if (v) S.kel.add(v);
+  nearN = NEAR_STEP;
+  rebuildDependent();
+  draw();
+  if (S.me.marker && v){
+    // tampilkan posisi saya dan toko di kelurahan itu bersamaan
+    const pts = visible().map((r) => [r.lat, r.lon]).concat([meLL()]);
+    map.fitBounds(L.latLngBounds(pts).pad(0.1), { maxZoom:16 });
+  } else fit();
+};
+$("btn-near").onclick = () => {
+  if (S.me.marker){ map.flyTo(S.me.marker.getLatLng(), Math.max(map.getZoom(), 15), { duration:.6 }); return; }
+  if (!S.me.on) startMe();
+};
+$("near-more").onclick = () => { nearN += NEAR_STEP; nearList(visible()); };
+$("near-list").onclick = (e) => {
+  const b = e.target.closest("[data-i]"); if (!b) return;
+  const m = S.markers[b.dataset.i]; if (!m) return;
+  if (window.matchMedia("(max-width:900px)").matches) window.scrollTo({ top:0, behavior:"smooth" });
+  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 17), { duration:.6 });
+  m.openPopup();
+};
+
+/* =============== simpan file di browser =============== */
+const IDB = {
+  open(){
+    return new Promise((res, rej) => {
+      const q = indexedDB.open("pesebaran-omset", 1);
+      q.onupgradeneeded = () => q.result.createObjectStore("f");
+      q.onsuccess = () => res(q.result);
+      q.onerror = () => rej(q.error);
+    });
+  },
+  async run(mode, fn){
+    const db = await IDB.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction("f", mode), st = tx.objectStore("f");
+      const q = fn(st);
+      tx.oncomplete = () => { db.close(); res(q && q.result); };
+      tx.onerror = () => { db.close(); rej(tx.error); };
+    });
+  },
+  put: (v) => IDB.run("readwrite", (st) => st.put(v, "last")),
+  get: () => IDB.run("readonly", (st) => st.get("last")),
+  del: () => IDB.run("readwrite", (st) => st.delete("last"))
+};
+$("btn-forget").onclick = () => {
+  IDB.del().catch(() => {});
+  $("saved-note").hidden = true;
+  toast("File dihapus dari browser ini. Data di peta tetap tampil sampai halaman ditutup.", 5000);
+};
 
 /* =============== events =============== */
 $("btn-loc").onclick = () => { S.me.on ? stopMe() : startMe(); };
@@ -1069,6 +1226,12 @@ window.addEventListener("resize", () => map.invalidateSize());
   syncTiles();
   ingest(sampleRows(), { sample:true });
   setTimeout(() => map.invalidateSize(), 60);
+  // buka lagi file terakhir yang diunggah di browser ini
+  if (window.indexedDB) IDB.get().then((f) => {
+    if (!f || !f.buf) return;
+    loadWorkbook(XLSX.read(new Uint8Array(f.buf), { type:"array", cellDates:false }), f.name);
+    if (!S.isSample) $("saved-note").hidden = false;
+  }).catch(() => {});
 })();
 </script>
 </body>
