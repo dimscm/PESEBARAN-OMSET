@@ -1,7 +1,7 @@
 # Pesebaran Omset Outlet
 
 Web untuk melihat **pesebaran omset outlet di peta**. Web ini membawa **data bawaan** dari
-`LOKASI_3_2_1.xlsx` (Grosir Minuman Jaktim, `data/lokasi.js`) yang langsung tampil saat dibuka.
+`LOKASI_3_2_1.xlsx` (Grosir Minuman Jaktim, `data/lokasi.js`) yang langsung tampil saat dibuka. Omset yang dipakai adalah **omset per minggu (rata-rata 26 minggu)**.
 Anda tetap bisa **unggah file Excel lain** untuk menggantinya, jadi daerah mana pun bisa memakai web yang sama.
 
 > Repositori ini publik, jadi isi `data/lokasi.js` (nama toko, salesman, omset) bisa dilihat siapa pun
@@ -29,7 +29,7 @@ Baris judul kolom dicari otomatis (tidak harus di baris pertama):
 | Nama Outlet | Nama Toko, Nama, Outlet Name, Pelanggan |
 | Channel | Chanel, Kanal, Tipe Outlet |
 | Alamat | Address |
-| Omset | Omzet, Penjualan, Sales, Revenue, Nilai (kolom omset pertama yang dipakai, mis. `Omzet 26 Week`) |
+| Omset | Omzet, Penjualan, Sales, Revenue, Nilai (kolom omset per minggu seperti `Omset / Week (avg 26WK)` diutamakan) |
 | Salesman | Nama Salesman |
 | Status | — |
 | Long | Longitude, Lng, Bujur, X |
@@ -60,7 +60,10 @@ diperkecil lewat penggeser *Ukuran titik*.
 
 - **Kecamatan** dan **Kelurahan** (pilihan kelurahan menyesuaikan kecamatan yang dipilih)
 - **Channel** — per channel asli, lengkap dengan warna dan jumlah outlet
-- **Omset** — Semua / < 10 jt / 10–25 jt / 25–50 jt / 50–100 jt / 100–200 jt / ≥ 200 jt (juga ada di panel Toko terdekat; keduanya selalu sama)
+- **Omset** — rentang omset, juga ada di panel Toko terdekat (keduanya selalu sama). Bila file punya kolom
+  omset per minggu (mis. `Omset / Week (avg 26WK)`), kolom itu yang dipakai dan rentangnya:
+  < 250 rb / 250–500 rb / 500 rb–1 jt / 1–2 jt / 2–4 jt / ≥ 4 jt per minggu. Tanpa kolom mingguan:
+  < 10 jt / 10–25 jt / 25–50 jt / 50–100 jt / 100–200 jt / ≥ 200 jt.
 - **Pencarian** nama outlet, alamat, atau nomor outlet
 - Klik baris di **Warna channel** untuk menyembunyikan/menampilkan satu kelompok warna
 
