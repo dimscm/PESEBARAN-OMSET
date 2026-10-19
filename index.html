@@ -179,6 +179,10 @@ button{cursor:pointer}
 .near-list .nm{display:block;font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .near-list .sub{display:block;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .near-list .route{font-size:11.5px;text-decoration:none}
+.om-range{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;margin-top:6px}
+.om-range span{color:var(--muted)}
+.om-range .input.bad{border-color:var(--red)}
+#om-hint{margin:2px 0 0}
 .pop-actions{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
 .pop-actions a{text-decoration:none}
 .leaflet-popup-content .pop-actions a.btn-primary{color:#fff}
@@ -301,6 +305,12 @@ button{cursor:pointer}
             <div class="field" style="margin:0">
               <label for="omset-quick">Omset<span data-unit=" per minggu"></span></label>
               <select class="input" id="omset-quick"></select>
+              <div class="om-range">
+                <input class="input" id="om-min" type="text" inputmode="decimal" autocomplete="off" placeholder="Dari, mis. 500rb" aria-label="Omset dari">
+                <span>&ndash;</span>
+                <input class="input" id="om-max" type="text" inputmode="decimal" autocomplete="off" placeholder="Sampai, mis. 4jt" aria-label="Omset sampai">
+              </div>
+              <p class="note" id="om-hint">Isi sendiri batasnya: <b>4jt</b>, <b>500rb</b>, <b>1,5jt</b> atau <b>4000000</b>. Kosongkan salah satu untuk tanpa batas.</p>
             </div>
             <button class="btn btn-primary" id="btn-near" type="button" style="justify-content:center">Cari toko terdekat dari lokasi saya</button>
           </div>
@@ -583,7 +593,7 @@ const S = {
   grominWins: false,
   off: {},          // hidden groups
   kec: new Set(), kel: new Set(), chan: new Set(),  // selected (empty = semua)
-  q: "", band: 0, perWeek: false, sizeMul: 1,
+  q: "", omMin: 0, omMax: Infinity, perWeek: false, sizeMul: 1,
   ref: 1, markers: null, layer: null,
   me: { on:false, marker:null, ring:null, first:true }
 };
@@ -637,8 +647,8 @@ function visible(){
     if (S.kec.size && !S.kec.has(r.kecamatan)) return false;
     if (S.kel.size && !S.kel.has(r.kelurahan)) return false;
     if (S.chan.size && !S.chan.has(r.channel || "(tanpa channel)")) return false;
-    const b = BANDS[S.band], o = r.omset || 0;
-    if (o < b[0] || o >= b[1]) return false;
+    const o = r.omset || 0;
+    if (o < S.omMin || o > S.omMax) return false;
     if (q && r.hay.indexOf(q) === -1) return false;
     return true;
   });
@@ -1233,21 +1243,65 @@ $("q").oninput = (e) => { clearTimeout(qt); qt = setTimeout(() => { S.q = e.targ
 function buildBands(){
   BANDS = S.perWeek ? BANDS_WEEK : BANDS_TOTAL;
   $("min-chips").innerHTML = BANDS.map((b, i) => '<button class="chip" data-v="' + i + '">' + b[2] + "</button>").join("");
-  $("omset-quick").innerHTML = BANDS.map((b, i) => '<option value="' + i + '">' + (i ? b[2] : "Semua omset") + "</option>").join("");
+  $("omset-quick").innerHTML = BANDS.map((b, i) => '<option value="' + i + '">' + (i ? b[2] : "Semua omset") + "</option>").join("") +
+    '<option value="custom">Atur sendiri…</option>';
   document.querySelectorAll("[data-unit]").forEach((el) => { el.textContent = S.perWeek ? el.dataset.unit : ""; });
   setBand(0);
 }
-function setBand(i){
-  S.band = i;
-  Array.from($("min-chips").children).forEach((x) => x.classList.toggle("on", +x.dataset.v === i));
-  $("omset-quick").value = String(i);
+/* "4jt" / "1,5 juta" / "500rb" / "4.000.000" -> rupiah; angka polos di bawah 1000 dibaca juta */
+function parseRp(txt){
+  const t = String(txt || "").toLowerCase().replace(/rp\.?/g, "").replace(/\s+/g, "");
+  if (!t) return null;
+  const m = t.match(/^([\d.,]+)(jt|juta|j|m|rb|ribu|k)?$/);
+  if (!m) return NaN;
+  let n;
+  if (m[2]){
+    n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));  // 1,5jt
+    if (/^\d+\.\d{1,2}$/.test(m[1])) n = parseFloat(m[1]);      // 1.5jt
+    return n * (/^(rb|ribu|k)$/.test(m[2]) ? 1e3 : 1e6);
+  }
+  n = toNum(m[1]);
+  if (n == null) return NaN;
+  return n < 1000 ? n * 1e6 : n;
+}
+const rpIn = (v) => v >= 1e6 ? (Math.round(v / 1e5) / 10).toString().replace(".", ",") + "jt"
+  : v >= 1e3 ? Math.round(v / 1e3) + "rb" : String(Math.round(v));
+function setRange(lo, hi, preset){
+  S.omMin = lo; S.omMax = hi;
+  Array.from($("min-chips").children).forEach((x) => x.classList.toggle("on", +x.dataset.v === preset));
+  $("omset-quick").value = preset < 0 ? "custom" : String(preset);
   nearN = NEAR_STEP;
 }
+function setBand(i){
+  const b = BANDS[i];
+  setRange(b[0], b[1] === Infinity ? Infinity : b[1], i);
+  $("om-min").value = i && b[0] ? rpIn(b[0]) : "";
+  $("om-max").value = i && b[1] !== Infinity ? rpIn(b[1]) : "";
+  $("om-min").classList.remove("bad"); $("om-max").classList.remove("bad");
+}
+function rangeFromInputs(){
+  const lo = parseRp($("om-min").value), hi = parseRp($("om-max").value);
+  $("om-min").classList.toggle("bad", Number.isNaN(lo));
+  $("om-max").classList.toggle("bad", Number.isNaN(hi));
+  if (Number.isNaN(lo) || Number.isNaN(hi)) return;
+  const a = lo == null ? 0 : lo, z = hi == null ? Infinity : hi;
+  const i = BANDS.findIndex((b, k) => k && b[0] === a && b[1] === z);
+  setRange(Math.min(a, z), Math.max(a, z), (lo == null && hi == null) ? 0 : i);
+  draw();
+}
+let omT;
+["om-min","om-max"].forEach((id) => {
+  $(id).oninput = () => { clearTimeout(omT); omT = setTimeout(rangeFromInputs, 350); };
+  $(id).onchange = () => { clearTimeout(omT); rangeFromInputs(); };
+});
 $("min-chips").onclick = (e) => {
   const c = e.target.closest(".chip"); if (!c) return;
   setBand(+c.dataset.v); draw();
 };
-$("omset-quick").onchange = (e) => { setBand(+e.target.value); draw(); };
+$("omset-quick").onchange = (e) => {
+  if (e.target.value === "custom"){ $("om-min").focus(); return; }
+  setBand(+e.target.value); draw();
+};
 $("size").oninput = (e) => {
   S.sizeMul = +e.target.value;
   $("size-val").textContent = S.sizeMul.toFixed(1).replace(".", ",") + "×";
