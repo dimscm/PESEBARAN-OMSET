@@ -60,7 +60,9 @@ diperkecil lewat penggeser *Ukuran titik*.
 
 - **Kecamatan** dan **Kelurahan** (pilihan kelurahan menyesuaikan kecamatan yang dipilih)
 - **Channel** — per channel asli, lengkap dengan warna dan jumlah outlet
-- **Omset** — rentang omset, juga ada di panel Toko terdekat (keduanya selalu sama). Bila file punya kolom
+- **Omset** — rentang omset, juga ada di panel Toko terdekat (keduanya selalu sama). Di panel Toko terdekat
+  batasnya bisa **diisi sendiri** (*Dari* / *Sampai*), mis. kosong – `4jt` untuk di bawah 4 juta; format `500rb`,
+  `1,5jt`, `4000000` terbaca, dan angka polos di bawah 1000 dibaca juta. Bila file punya kolom
   omset per minggu (mis. `Omset / Week (avg 26WK)`), kolom itu yang dipakai dan rentangnya:
   < 250 rb / 250–500 rb / 500 rb–1 jt / 1–2 jt / 2–4 jt / ≥ 4 jt per minggu. Tanpa kolom mingguan:
   < 10 jt / 10–25 jt / 25–50 jt / 50–100 jt / 100–200 jt / ≥ 200 jt.
