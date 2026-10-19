@@ -321,7 +321,7 @@ button{cursor:pointer}
             <select class="input" id="sheet"></select>
           </div>
           <div id="map-cols" class="block-body tight" style="padding:0;margin-top:10px" hidden></div>
-          <p class="note" id="saved-note" style="margin-top:10px" hidden>File ini tersimpan di browser ini saja, jadi langsung terbuka lagi saat web dibuka berikutnya. <button class="btn-ghost btn-sm" id="btn-forget" type="button">Hapus dari browser</button></p>
+          <p class="note" id="saved-note" style="margin-top:10px" hidden>File unggahan ini tersimpan di browser ini saja dan dipakai menggantikan data bawaan setiap web dibuka. <button class="btn-ghost btn-sm" id="btn-forget" type="button">Kembali ke data bawaan</button></p>
           <p class="note" style="margin-top:10px">Kolom dibaca otomatis: <b>Kecamatan, Kelurahan, No Outlet, Nama Outlet, Channel, Alamat, Omset, Long, Lat</b>. Nama kolom lain yang sejenis juga dikenali.</p>
         </div>
       </section>
@@ -421,6 +421,7 @@ button{cursor:pointer}
 
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/xlsx.full.min.js"></script>
+<script src="data/lokasi.js"></script>
 <script>
 "use strict";
 
@@ -491,7 +492,7 @@ const FIELDS = [
   { key:"nama",      label:"Nama Outlet", pats:[/nama\s*outlet/, /nama\s*toko/, /outlet\s*name/, /^nama$/, /^name$/, /^toko$/, /pelanggan/, /customer/] },
   { key:"channel",   label:"Channel", pats:[/cha?nn?el/, /kanal/, /tipe\s*outlet/, /segment/] },
   { key:"alamat",    label:"Alamat", pats:[/alamat/, /address/] },
-  { key:"omset",     label:"Omset", pats:[/oms?[ez]t/, /penjualan/, /revenue/, /^sales(?!man)/, /value/, /nilai/] },
+  { key:"omset",     label:"Omset", pats:[/om[sz]?[ez]t/, /penjualan/, /revenue/, /^sales(?!man)/, /value/, /nilai/] },
   { key:"salesman",  label:"Salesman", pats:[/salesman/, /^sales\s*name/, /^nama\s*sales/, /^sales$/] },
   { key:"status",    label:"Status", pats:[/^status/] },
   { key:"lon",       label:"Longitude", pats:[/^long?$/, /longitude/, /^lng$/, /bujur/, /^x$/] },
@@ -1134,8 +1135,25 @@ const IDB = {
 $("btn-forget").onclick = () => {
   IDB.del().catch(() => {});
   $("saved-note").hidden = true;
-  toast("File dihapus dari browser ini. Data di peta tetap tampil sampai halaman ditutup.", 5000);
+  if (loadDefault()) toast("File unggahan dihapus dari browser ini. Peta kembali memakai data bawaan.", 5000);
+  else toast("File dihapus dari browser ini. Data di peta tetap tampil sampai halaman ditutup.", 5000);
 };
+
+/* =============== data bawaan (data/lokasi.js) =============== */
+function loadDefault(){
+  const d = window.DEFAULT_DATA;
+  if (!d || !d.rows || !d.rows.length) return false;
+  const rows = JSON.parse(JSON.stringify(d.rows));
+  S.fileName = d.meta.file;
+  $("fname").hidden = false; $("fname").textContent = "Data bawaan: " + d.meta.file;
+  $("fmeta").hidden = false;
+  $("fmeta").innerHTML = "<span>" + nfID.format(rows.length) + " toko</span><span>unggah file lain untuk mengganti</span>";
+  $("sheet-wrap").hidden = true;
+  $("map-cols").hidden = true;
+  $("sheet-tag").textContent = d.meta.sheet || "";
+  ingest(rows, { sample:false });
+  return true;
+}
 
 /* =============== events =============== */
 $("btn-loc").onclick = () => { S.me.on ? stopMe() : startMe(); };
@@ -1224,7 +1242,7 @@ window.addEventListener("resize", () => map.invalidateSize());
   const saved = store("po-theme");
   if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
   syncTiles();
-  ingest(sampleRows(), { sample:true });
+  if (!loadDefault()) ingest(sampleRows(), { sample:true });
   setTimeout(() => map.invalidateSize(), 60);
   // buka lagi file terakhir yang diunggah di browser ini
   if (window.indexedDB) IDB.get().then((f) => {
